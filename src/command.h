@@ -29,7 +29,8 @@
 
 #include <cstddef>
 #include <string>
-#include <unordered_map>
+#include <map>
+#include <algorithm>
 
 class CommandLine;
 class BB;
@@ -59,7 +60,7 @@ struct Base {
 
 };
 
-struct Dispatcher : public std::unordered_map<std::string, Base*> { 
+struct Dispatcher : public std::map<std::string, Base*> { 
 
    struct deleter
    {

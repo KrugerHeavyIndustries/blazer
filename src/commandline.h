@@ -31,6 +31,7 @@
 #include <string>
 #include <set>
 #include <vector>
+#include "string.h"
 #include "multidict.h"
 
 struct CommandLine {

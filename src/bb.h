@@ -34,6 +34,7 @@
 #include <list>
 #include <map>
 #include <sstream>
+#include <stdint.h>
 
 #include "multidict.h"
 

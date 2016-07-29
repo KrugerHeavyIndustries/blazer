@@ -31,6 +31,7 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <algorithm>
 
 #include "bb.h"
 #include "coding.h"

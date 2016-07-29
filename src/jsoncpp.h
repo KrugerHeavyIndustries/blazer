@@ -28,6 +28,7 @@
 #define JSON_H
 
 #include <string>
+#include <stdint.h>
 
 struct json_t; 
 

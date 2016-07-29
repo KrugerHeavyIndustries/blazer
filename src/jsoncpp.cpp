@@ -93,7 +93,7 @@ Json Json::at(int index) const {
    if (isArray()) { 
       json_t* array = json_array_get(m_json, index); 
       if (array == NULL) { 
-         std::out_of_range("array index " + std::to_string(index) + " is out of range or json entity is not an array");
+         std::out_of_range("array index is out of range or json entity is not an array");
       } 
       return Json(json_incref(array));
    } else { 

@@ -30,6 +30,7 @@
 #include <sstream>
 #include <string>
 #include <map>
+#include <algorithm>
 
 namespace khi {
 
