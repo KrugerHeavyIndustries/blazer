@@ -37,10 +37,11 @@
 
 #include <unistd.h>
 #include <pwd.h>
+#include <sys/param.h>
 
 using namespace std;
 
-void loadCredentialFile(const string& path, string& accountId, string& applicatioKey, string& name, int verbosity = 0);
+void loadBlazerFile(const string& path, string& accountId, string& applicatioKey, string& name, int verbosity = 0);
 
 void printUsage();
 
@@ -63,7 +64,6 @@ int main(int argc, char * argv[]) {
    CommandLine cmds;
    cmds.flagParams.insert("-v"); // verbosity level
    cmds.flagParams.insert("-c"); // credentials file
-   cmds.flagParams.insert("-p"); // permissions (canned ACL)
    cmds.flagParams.insert("-t"); // type (Content-Type)
    cmds.flagParams.insert("-m"); // metadata
    cmds.parse(argc, argv);
@@ -73,39 +73,39 @@ int main(int argc, char * argv[]) {
    string applicationKey;
    string name;
     
-   if(cmds.flagSet("-v")) {
+   if (cmds.flagSet("-v")) {
        verbosity = cmds.opts.getWithDefault("-v", 2);
        if(verbosity > 0)
            cout << "Verbose output level " << verbosity << endl;
    }
     
-   if(cmds.flagSet("-c")) {
-       string credFile = cmds.opts.getWithDefault("-c", "");
-       loadCredentialFile(credFile, accountId, applicationKey, name);
+   if (cmds.flagSet("-c")) {
+       string givenFilePath = cmds.opts.getWithDefault("-c", "");
+       loadBlazerFile(givenFilePath, accountId, applicationKey, name);
    } else {
        // credentials not specified. Try standard locations
-       char pwd[PATH_MAX];
-       getcwd(pwd, PATH_MAX);
+       char pwd[MAXPATHLEN];
+       getcwd(pwd, MAXPATHLEN);
        string localFilePath(string(pwd) + "/.blazer");
         
-       struct passwd * ent = getpwnam(getlogin());
+       struct passwd* ent = getpwuid(geteuid());
        string userFilePath(string(ent->pw_dir) + "/.blazer");
         
-       ifstream cred;
+       ifstream file;
         
-       // Try ${PWD}/.credentials first
-       cred.open(localFilePath.c_str());
-       if (cred) {
-           cred.close();
-           loadCredentialFile(localFilePath, accountId, applicationKey, name);
+       // Try ${PWD}/.blazer first
+       file.open(localFilePath.c_str());
+       if (file) {
+           file.close();
+           loadBlazerFile(localFilePath, accountId, applicationKey, name);
        } else {
-           cred.clear();
-           cred.open(userFilePath.c_str());
-           if (cred) {
-               cred.close();
-               loadCredentialFile(userFilePath, accountId, applicationKey, name);
+           file.clear();
+           file.open(userFilePath.c_str());
+           if (file) {
+               file.close();
+               loadBlazerFile(userFilePath, accountId, applicationKey, name);
            } else {
-                cerr << "Could not open credentials file" << endl;
+                cerr << "Could not open blazer file" << endl;
                 return EXIT_FAILURE;
            }
        }
@@ -149,7 +149,7 @@ int main(int argc, char * argv[]) {
    return result;
 }
 
-void loadCredentialFile(const string& path, string& accountId, string& applicationKey, string& name, int verbosity)
+void loadBlazerFile(const string& path, string& accountId, string& applicationKey, string& name, int verbosity)
 {
     ifstream cred(path.c_str());
     if (cred) {
