@@ -37,6 +37,7 @@
 #include <stdint.h>
 
 #include "multidict.h"
+#include "session.h"
 
 namespace RestClient { 
    class Connection;
@@ -68,14 +69,12 @@ class BB {
 
    std::string m_accountId;
    std::string m_applicationKey;
-   std::string m_apiUrl;
-   std::string m_downloadUrl;
-   std::string m_authorizationToken;
+   
+   Session m_session; 
 
    RestClient::Connection* m_connection;
 
-   int verbosity;
-   std::list<BB_Bucket> buckets;
+   std::list<BB_Bucket> m_buckets;
 
    static const std::string API_URL_PATH; 
     
@@ -98,8 +97,6 @@ class BB {
    void authorize();
 
    void setupConnection(const std::string& baseUrl);
-    
-   void setVerbosity(int v) { verbosity = v; }
     
    std::list<BB_Bucket>& getBuckets(bool getContents, bool refresh);
                                      

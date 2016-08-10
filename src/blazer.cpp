@@ -39,6 +39,8 @@
 #include <pwd.h>
 #include <sys/param.h>
 
+#define PATH_BLAZER_DIR ".blazer"
+
 using namespace std;
 
 void loadBlazerFile(const string& path, string& accountId, string& applicatioKey, string& name, int verbosity = 0);
@@ -71,57 +73,61 @@ int main(int argc, char * argv[]) {
     
    string accountId;
    string applicationKey;
+   string authorizationToken; 
+   string apiUrl; 
+   string downloadUrl;
    string name;
     
+   struct passwd* pw = getpwuid(geteuid());
+   string home(pw->pw_dir);
+
    if (cmds.flagSet("-v")) {
        verbosity = cmds.opts.getWithDefault("-v", 2);
        if(verbosity > 0)
            cout << "Verbose output level " << verbosity << endl;
    }
     
+   ifstream file;
+        
    if (cmds.flagSet("-c")) {
        string givenFilePath = cmds.opts.getWithDefault("-c", "");
        loadBlazerFile(givenFilePath, accountId, applicationKey, name);
    } else {
-       // credentials not specified. Try standard locations
-       char pwd[MAXPATHLEN];
-       getcwd(pwd, MAXPATHLEN);
-       string localFilePath(string(pwd) + "/.blazer");
-        
-       struct passwd* ent = getpwuid(geteuid());
-       string userFilePath(string(ent->pw_dir) + "/.blazer");
-        
-       ifstream file;
-        
-       // Try ${PWD}/.blazer first
-       file.open(localFilePath.c_str());
-       if (file) {
-           file.close();
-           loadBlazerFile(localFilePath, accountId, applicationKey, name);
-       } else {
-           file.clear();
-           file.open(userFilePath.c_str());
-           if (file) {
-               file.close();
-               loadBlazerFile(userFilePath, accountId, applicationKey, name);
-           } else {
-                cerr << "Could not open blazer file" << endl;
-                return EXIT_FAILURE;
-           }
-       }
+      // credentials not specified. Try standard locations
+      char pwd[MAXPATHLEN];
+      getcwd(pwd, MAXPATHLEN);
+
+      string localFilePath(string(pwd) + "/" + PATH_BLAZER_DIR + "/" + "config");
+      string userFilePath(home + "/" + PATH_BLAZER_DIR + "/" + "config");
+
+      // Try ${PWD}/.blazer first
+      file.open(localFilePath.c_str());
+      if (file) {
+          file.close();
+          loadBlazerFile(localFilePath, accountId, applicationKey, name);
+      } else {
+          file.clear();
+          file.open(userFilePath.c_str());
+          if (file) {
+              file.close();
+              loadBlazerFile(userFilePath, accountId, applicationKey, name);
+          } else {
+               cerr << "Could not open blazer file" << endl;
+               return EXIT_FAILURE;
+          }
+      }
    }
-    
-    // Create and configure blazer
+
+   // Create and configure blazer
    BB bb(accountId, applicationKey);
    bb.authorize();
-   bb.setVerbosity(verbosity);
     
    // Remove executable name if called directly with commands, otherwise show usage
    // If symlinked, use the executable name to determine the desired operation
    // Trim to just command name
    cmds.words[0] = cmds.words[0].substr(cmds.words[0].find_last_of('/') + 1);
-   if(cmds.words[0] == "blazer") {
-       if(cmds.words.size() < 2) {
+   if (cmds.words[0] == "blazer") {
+       if (cmds.words.size() < 2) {
            printUsage();
            return EXIT_SUCCESS;
        }
@@ -129,12 +135,9 @@ int main(int argc, char * argv[]) {
        --wordc;
    }
     
-   // First string in cmds.words[] is command name, following strings are parameter strings
-    
-   // Perform command
+   // First string in cmds.words[] array is command name, following strings are parameter strings
    int result = EXIT_SUCCESS;
-   if (commands.find(cmds.words[0]) != commands.end())
-   {
+   if (commands.find(cmds.words[0]) != commands.end()) {
        try {
            result = commands[cmds.words[0]]->execute(cmds.words.size(), cmds, bb);
        }
@@ -149,25 +152,23 @@ int main(int argc, char * argv[]) {
    return result;
 }
 
-void loadBlazerFile(const string& path, string& accountId, string& applicationKey, string& name, int verbosity)
-{
+void loadBlazerFile(const string& path, string& accountId, string& applicationKey, string& name, int verbosity) {
     ifstream cred(path.c_str());
     if (cred) {
         while (cred) {
             string cmd;
             cred >> cmd;
-            if(cmd == "accountId")
+            if (cmd == "accountId")
                 cred >> accountId;
-            else if(cmd == "applicationKey")
+            else if (cmd == "applicationKey")
                 cred >> applicationKey;
-            else if(cmd == "name") {
+            else if (cmd == "name") {
                 cred >> name;
             }
         }
         if (verbosity >= 2)
             cout << "using credentials from " << path << ", name: " << name << endl;
-    }
-    else {
+    } else {
         cerr << "Error: Could not load credentials file from " << path << "." << endl;
         exit(EXIT_FAILURE);
     }
