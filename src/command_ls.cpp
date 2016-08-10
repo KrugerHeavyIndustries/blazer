@@ -72,7 +72,7 @@ void Ls::listBuckets(CommandLine& cmds, BB& bb) {
    } else {
       std::cout << "Buckets:" << std::endl;
       for (bkt = buckets.begin(); bkt != buckets.end(); ++bkt) {
-          std::cout << bkt->name << std::endl;
+          std::cout << bkt->name << " (" << bkt->id << ")" << std::endl;
       }
    }
 }

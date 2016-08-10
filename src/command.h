@@ -56,6 +56,8 @@ struct Base {
 
    void printObject(const BB_Object& object, bool longFormat = false);
 
+   void parse1(int& idx, const CommandLine& cmds, std::string& position1); 
+
    void parse2(int& idx, const CommandLine& cmds, std::string& position1, std::string& position2);
 
 };
@@ -88,6 +90,8 @@ struct Dispatcher : public std::map<std::string, Base*> {
 #include "command_upload_file.h"
 #include "command_file_by_id.h" 
 #include "command_file_by_name.h"
+#include "command_create_bucket.h"
+#include "command_delete_bucket.h"
 
 #endif // COMMAND_H
 

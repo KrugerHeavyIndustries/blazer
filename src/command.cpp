@@ -38,10 +38,10 @@ using namespace std;
 
 void Base::printBucket(const BB_Bucket& bucket, bool bucketName) { 
    if (bucketName)
-      cout << bucket.name << endl;
+      cout << bucket.name << " (" << bucket.id << ")" << endl;
    list<BB_Object>::const_iterator obj;
    for (obj = bucket.objects.begin(); obj != bucket.objects.end(); ++obj) {
-       if(bucketName) cout << "  ";
+       if (bucketName) cout << "  ";
        printObject(*obj);
        cout << endl;
    }
@@ -65,6 +65,11 @@ void Base::printObject(const BB_Object& object, bool longFormat) {
       cout << " " << object.action; 
       cout << " " << object.uploadTimestamp;
    }
+}
+
+void Base::parse1(int& idx, const CommandLine& cmds, string& position1) {
+   position1 = cmds.words[idx];
+   ++idx;
 }
 
 void Base::parse2(int& idx, const CommandLine& cmds, string& position1, string& position2) { 

@@ -109,6 +109,10 @@ class BB {
    void downloadFileById(const std::string& key, std::ofstream& fout); 
      
    void downloadFileByName(const std::string& bucket, const std::string& name, std::ofstream& fout); 
+
+   void createBucket(const std::string& bucketName); 
+   
+   void deleteBucket(const std::string& bucketId);
  
    std::string listBuckets();
     

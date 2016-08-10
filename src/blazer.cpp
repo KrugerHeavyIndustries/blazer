@@ -60,6 +60,8 @@ int main(int argc, char * argv[]) {
    commands.add<UploadFile>("upload_file");
    commands.add<FileById>("get_file_by_id");
    commands.add<FileByName>("get_file_by_name");
+   commands.add<CreateBucket>("create_bucket");
+   commands.add<DeleteBucket>("delete_bucket");
 
    MimeTypes::initialize();
     

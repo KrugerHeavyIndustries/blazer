@@ -274,6 +274,32 @@ void BB::downloadFileByName(const string& bucket, const string& name, ofstream& 
    fout.close();
 }
 
+void BB::createBucket(const string& bucketName) { 
+   setupConnection(m_session.apiUrl + API_URL_PATH);
+
+   RestClient::HeaderFields headers; 
+   headers["Authorization"] = m_session.authorizationToken;
+   m_connection->SetHeaders(headers);
+
+   RestClient::Response response = m_connection->get("/b2_create_bucket?accountId=" + m_accountId + "&bucketName=" + bucketName + "&bucketType=allPrivate");
+   if (response.code == 200) { 
+      // ok
+   }
+}
+
+void BB::deleteBucket(const string& bucketId) { 
+   setupConnection(m_session.apiUrl + API_URL_PATH); 
+
+   RestClient::HeaderFields headers; 
+   headers["Authorization"] = m_session.authorizationToken;
+   m_connection->SetHeaders(headers);
+
+   RestClient::Response response = m_connection->get("/b2_delete_bucket?accountId=" + m_accountId + "&bucketId=" + bucketId);
+   if (response.code == 200) { 
+      // ok
+   }
+}
+
 std::string BB::listBuckets() {
    if (!m_connection) { 
       std::ostringstream urlstream;
