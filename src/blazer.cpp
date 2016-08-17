@@ -42,16 +42,15 @@
 #define PATH_BLAZER_DIR ".blazer"
 
 using namespace std;
+using namespace khi;
+using namespace khi::command;
 
 void loadBlazerFile(const string& path, string& accountId, string& applicatioKey, string& name, int verbosity = 0);
 
-void printUsage();
+void printUsage(const Dispatcher& commands);
 
 int main(int argc, char * argv[]) {
    
-   using namespace khi;
-   using namespace khi::command;
-
    int verbosity = 1;
 
    Dispatcher commands;
@@ -130,7 +129,7 @@ int main(int argc, char * argv[]) {
    cmds.words[0] = cmds.words[0].substr(cmds.words[0].find_last_of('/') + 1);
    if (cmds.words[0] == "blazer") {
        if (cmds.words.size() < 2) {
-           printUsage();
+           printUsage(commands);
            return EXIT_SUCCESS;
        }
        cmds.words.erase(cmds.words.begin());
@@ -176,6 +175,7 @@ void loadBlazerFile(const string& path, string& accountId, string& applicationKe
     }
 }
 
-void printUsage() {
+void printUsage(const Dispatcher& dispatcher) {
    cout << "Usage:" << endl;
+   dispatcher.printUsage();
 }

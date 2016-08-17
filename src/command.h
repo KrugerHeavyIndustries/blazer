@@ -67,18 +67,29 @@ struct Dispatcher : public std::map<std::string, Base*> {
    struct deleter
    {
       template <typename T>
-      void operator()(const T& p) const
-      {
+      void operator()(const T& p) const {
          delete p.second;
       }
    };
 
-   template <class T> 
+   struct printer
+   {
+      template <typename T>
+      void operator()(const T& p) const  {
+         p.second->printUsage();
+      }
+   };
+
+   template <class T>
    void add(const std::string& key) {
       insert(std::make_pair(key, new T()));
    }
 
-   ~Dispatcher() { 
+   void printUsage() const {
+      std::for_each(begin(), end(), printer());
+   }
+
+   ~Dispatcher() {
       std::for_each(begin(), end(), deleter());
    }
 };
