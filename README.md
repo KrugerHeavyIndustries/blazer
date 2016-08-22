@@ -19,8 +19,8 @@ Then one can install the blazer application.
 ## Setting Up
 
 When you sign up with Backblaze you will be issued an account id and an 
-application key. You will need to inform Blazer of those details in order to 
-use blazer. These details live in the blazer configuration file.
+application key. You will need to inform blazer of those details in order to 
+use it. These details live in the blazer configuration file.
 
     mkdir ~/.blazer 
     echo "accountId <YOUR_B2_ACCOUNT_ID>" > ~/.blazer/config
