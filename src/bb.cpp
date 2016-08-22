@@ -58,8 +58,7 @@ const string BB::API_URL_PATH = "/b2api/v1";
 BB::BB(const string& accountId, const string& applicationKey) :
    m_accountId(accountId), 
    m_applicationKey(applicationKey),
-   m_session(Session::load()),
-   m_connection(NULL)
+   m_session(Session::load())
 {
    RestClient::init();
 }
@@ -70,16 +69,14 @@ BB::~BB() {
 
 void BB::authorize() {
    if (m_session.unknown()) {
-      m_connection = new RestClient::Connection("https://api.backblaze.com" + API_URL_PATH);
-      m_connection->SetTimeout(20);
-      m_connection->SetUserAgent("cmd/blazer");
-      m_connection->SetBasicAuth(m_accountId, m_applicationKey); 
+      RestClient::Connection* connection = connect("https://api.backblaze.com" + API_URL_PATH);
+      connection->SetBasicAuth(m_accountId, m_applicationKey);
 
-      RestClient::HeaderFields headers; 
+      RestClient::HeaderFields headers;
       headers["Accept"] = "application/json";
-      m_connection->SetHeaders(headers);
+      connection->SetHeaders(headers);
 
-      RestClient::Response response = m_connection->get("/b2_authorize_account");
+      RestClient::Response response = connection->get("/b2_authorize_account");
 
       khi::Json json = khi::Json::load(response.body); 
       khi::Json downloadUrl = json.get("downloadUrl");
@@ -91,19 +88,15 @@ void BB::authorize() {
       m_session.authorizationToken = authorizationToken.get<std::string>();
       m_session.save();
 
-      delete m_connection; 
-      m_connection = NULL;
+      delete connection;
    }
 }
 
-void BB::setupConnection(const string& baseUrl) { 
-   m_connection = new RestClient::Connection(baseUrl);
-   m_connection->SetTimeout(20);
-   m_connection->SetUserAgent("cmd/blazer");
-
-   RestClient::HeaderFields headers; 
-   headers["Authorization"] = m_session.authorizationToken;
-   m_connection->SetHeaders(headers);
+RestClient::Connection* BB::connect(const string& baseUrl) {
+   RestClient::Connection* connection = new RestClient::Connection(baseUrl);
+   connection->SetTimeout(20);
+   connection->SetUserAgent("cmd/blazer");
+   return connection;
 }
 
 void BB::parseBucketsList(list<BB_Bucket>& buckets, const string& json) {
@@ -176,26 +169,34 @@ std::list<BB_Bucket>& BB::getBuckets(bool getContents, bool refresh) {
 }
 
 void BB::refreshBuckets(bool getContents) {
-    m_buckets.clear();
-    parseBucketsList(m_buckets, listBuckets());
+
+   RestClient::Connection* connection = connect(m_session.apiUrl + API_URL_PATH);
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = m_session.authorizationToken;
+   connection->SetHeaders(headers);
+
+   m_buckets.clear();
+   parseBucketsList(m_buckets, listBuckets(connection));
     
-    if (getContents) {
-        list<BB_Bucket>::iterator bkt;
-        for (bkt = m_buckets.begin(); bkt != m_buckets.end(); ++bkt)
-            getBucketContents(*bkt);
-    }
+   if (getContents) {
+       list<BB_Bucket>::iterator bkt;
+       for (bkt = m_buckets.begin(); bkt != m_buckets.end(); ++bkt)
+           getBucketContents(connection, *bkt);
+   }
+   delete connection;
 }
 
-void BB::getBucketContents(BB_Bucket& bucket) {
-    parseObjectsList(bucket.objects, listBucket(bucket.id));
+void BB::getBucketContents(RestClient::Connection* connection, BB_Bucket& bucket) {
+    parseObjectsList(bucket.objects, listBucket(connection, bucket.id));
 }
 
 bool BB::getUploadUrl(UploadUrlInfo& info) { 
    bool ok = false;
-   setupConnection(m_session.apiUrl + API_URL_PATH);
+   RestClient::Connection* connection = connect(m_session.apiUrl + API_URL_PATH);
    khi::Json json = khi::Json::object();
    json.set("bucketId", khi::Json::string(info.bucketId));
-   RestClient::Response response = m_connection->post("/b2_get_upload_url", json.dump());
+   RestClient::Response response = connection->post("/b2_get_upload_url", json.dump());
    if (response.code == 200) {
       khi::Json json = khi::Json::load(response.body);
       info.bucketId = json.get("bucketId").get<string>();
@@ -203,8 +204,7 @@ bool BB::getUploadUrl(UploadUrlInfo& info) {
       info.authorizationToken = json.get("authorizationToken").get<string>();
       ok = true;
    }
-   delete m_connection; 
-   m_connection = NULL;
+   delete connection;
    return ok;
 }
 
@@ -222,8 +222,6 @@ void BB::uploadFile(const string& bucket, const string& name, const string& type
          return;
       }
 
-      setupConnection(uploadUrlInfo.uploadUrl); 
-
       uint8_t sha1[EVP_MAX_MD_SIZE];
       size_t length = computeSha1(sha1, fin);
 
@@ -235,12 +233,14 @@ void BB::uploadFile(const string& bucket, const string& name, const string& type
          sha1hex << std::setw(2) << (unsigned int)(*ptr);
       }
 
+      RestClient::Connection* connection = connect(uploadUrlInfo.uploadUrl);
+
       RestClient::HeaderFields headers; 
       headers["Authorization"] = uploadUrlInfo.authorizationToken;
       headers["Content-Type"] = type;
       headers["X-Bz-File-Name"] = name;
       headers["X-Bz-Content-Sha1"] = sha1hex.str();
-      m_connection->SetHeaders(headers);
+      connection->SetHeaders(headers);
 
       fin.clear();
       fin.seekg(0, ios_base::end);
@@ -254,72 +254,65 @@ void BB::uploadFile(const string& bucket, const string& name, const string& type
       }
       fin.close();
 
-      RestClient::Response response = m_connection->post("", string(buf, length));
+      RestClient::Response response = connection->post("", string(buf, length));
 
       delete[] buf;
+      delete connection;
    }
 }
 
 void BB::downloadFileById(const string& id, ofstream& fout) { 
-   setupConnection(m_session.downloadUrl + API_URL_PATH);
-   RestClient::Response response = m_connection->get("/b2_download_file_by_id?fileId=" + id);
+   RestClient::Connection* connection = connect(m_session.downloadUrl + API_URL_PATH);
+   RestClient::Response response = connection->get("/b2_download_file_by_id?fileId=" + id);
    fout << response.body;
    fout.close();
+   delete connection;
 }
 
-void BB::downloadFileByName(const string& bucket, const string& name, ofstream& fout) { 
-   setupConnection(m_session.downloadUrl + "/file");
-   RestClient::Response response = m_connection->get("/" + bucket + "/" + name); 
-   fout << response.body; 
+void BB::downloadFileByName(const string& bucket, const string& name, ofstream& fout) {
+   RestClient::Connection* connection = connect(m_session.downloadUrl + "/file");
+   RestClient::Response response = connection->get("/" + bucket + "/" + name);
+   fout << response.body;
    fout.close();
+   delete connection;
 }
 
 void BB::createBucket(const string& bucketName) { 
-   setupConnection(m_session.apiUrl + API_URL_PATH);
+   RestClient::Connection* connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers; 
    headers["Authorization"] = m_session.authorizationToken;
-   m_connection->SetHeaders(headers);
+   connection->SetHeaders(headers);
 
-   RestClient::Response response = m_connection->get("/b2_create_bucket?accountId=" + m_accountId + "&bucketName=" + bucketName + "&bucketType=allPrivate");
+   RestClient::Response response = connection->get("/b2_create_bucket?accountId=" + m_accountId + "&bucketName=" + bucketName + "&bucketType=allPrivate");
    if (response.code == 200) { 
       // ok
    }
+   delete connection;
 }
 
-void BB::deleteBucket(const string& bucketId) { 
-   setupConnection(m_session.apiUrl + API_URL_PATH); 
+void BB::deleteBucket(const string& bucketId) {
+   RestClient::Connection* connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers; 
    headers["Authorization"] = m_session.authorizationToken;
-   m_connection->SetHeaders(headers);
+   connection->SetHeaders(headers);
 
-   RestClient::Response response = m_connection->get("/b2_delete_bucket?accountId=" + m_accountId + "&bucketId=" + bucketId);
+   RestClient::Response response = connection->get("/b2_delete_bucket?accountId=" + m_accountId + "&bucketId=" + bucketId);
    if (response.code == 200) { 
       // ok
    }
+   delete connection;
 }
 
-std::string BB::listBuckets() {
-   if (!m_connection) { 
-      std::ostringstream urlstream;
-      urlstream << m_session.apiUrl << API_URL_PATH;
-      m_connection = new RestClient::Connection(urlstream.str());
-   }
-
-   RestClient::HeaderFields headers; 
-   headers["Authorization"] = m_session.authorizationToken;
-   m_connection->SetHeaders(headers);
-
-   std::ostringstream uristream; 
-   uristream << "/b2_list_buckets?accountId=" << m_accountId;
-   RestClient::Response response = m_connection->get(uristream.str());
+std::string BB::listBuckets(RestClient::Connection* connection) {
+   RestClient::Response response = connection->get("/b2_list_buckets?accountId=" + m_accountId);
    return response.body;
 }
 
-std::string BB::listBucket(const string& bucketId) {
+std::string BB::listBucket(RestClient::Connection* connection, const string& bucketId) {
    khi::Json json = khi::Json::object();
    json.set("bucketId", khi::Json::string(bucketId));
-   RestClient::Response response = m_connection->post("/b2_list_file_names", json.dump());
+   RestClient::Response response = connection->post("/b2_list_file_names", json.dump());
    return response.body;
 }

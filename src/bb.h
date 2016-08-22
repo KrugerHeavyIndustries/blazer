@@ -72,8 +72,6 @@ class BB {
    
    Session m_session; 
 
-   RestClient::Connection* m_connection;
-
    std::list<BB_Bucket> m_buckets;
 
    static const std::string API_URL_PATH; 
@@ -96,13 +94,9 @@ class BB {
 
    void authorize();
 
-   void setupConnection(const std::string& baseUrl);
-    
    std::list<BB_Bucket>& getBuckets(bool getContents, bool refresh);
                                      
    void refreshBuckets(bool getContents);
-    
-   void getBucketContents(BB_Bucket& bucket);
     
    void uploadFile(const std::string& bucket, const std::string& name, const std::string& contentType);
    
@@ -113,10 +107,15 @@ class BB {
    void createBucket(const std::string& bucketName); 
    
    void deleteBucket(const std::string& bucketId);
+
+   private:
+
+   RestClient::Connection* connect(const std::string& baseUrl);
  
-   std::string listBuckets();
+   std::string listBuckets(RestClient::Connection* connection);
     
-   std::string listBucket(const std::string& bkt);
-    
+   std::string listBucket(RestClient::Connection* connection, const std::string& bkt);
+
+   void getBucketContents(RestClient::Connection* connection, BB_Bucket& bucket);
 };
 #endif // BLAZER_IO_H 

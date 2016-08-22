@@ -85,7 +85,7 @@ struct Dispatcher : public std::map<std::string, Base*> {
       insert(std::make_pair(key, new T()));
    }
 
-   void printUsage() const {
+   void printUsages() const {
       std::for_each(begin(), end(), printer());
    }
 

@@ -119,10 +119,6 @@ int main(int argc, char * argv[]) {
       }
    }
 
-   // Create and configure blazer
-   BB bb(accountId, applicationKey);
-   bb.authorize();
-    
    // Remove executable name if called directly with commands, otherwise show usage
    // If symlinked, use the executable name to determine the desired operation
    // Trim to just command name
@@ -139,16 +135,20 @@ int main(int argc, char * argv[]) {
    // First string in cmds.words[] array is command name, following strings are parameter strings
    int result = EXIT_SUCCESS;
    if (commands.find(cmds.words[0]) != commands.end()) {
-       try {
-           result = commands[cmds.words[0]]->execute(cmds.words.size(), cmds, bb);
-       }
-       catch(std::runtime_error & err) {
-           cerr << "ERROR: " << err.what() << endl;
-           return EXIT_FAILURE;
-       }
+      try {
+         // Create and configure blazer
+         BB bb(accountId, applicationKey);
+         bb.authorize();
+
+         result = commands[cmds.words[0]]->execute(cmds.words.size(), cmds, bb);
+      }
+      catch(std::runtime_error & err) {
+         cerr << "ERROR: " << err.what() << endl;
+         return EXIT_FAILURE;
+      }
    } else {
-       cerr << "Did not understand command \"" << cmds.words[0] << "\"" << endl;
-       return EXIT_FAILURE;
+      cerr << "Did not understand command \"" << cmds.words[0] << "\"" << endl;
+      return EXIT_FAILURE;
    }
    return result;
 }
@@ -177,5 +177,5 @@ void loadBlazerFile(const string& path, string& accountId, string& applicationKe
 
 void printUsage(const Dispatcher& dispatcher) {
    cout << "Usage:" << endl;
-   dispatcher.printUsage();
+   dispatcher.printUsages();
 }

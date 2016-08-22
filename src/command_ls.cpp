@@ -61,18 +61,16 @@ void Ls::printUsage() {
 }
 
 void Ls::listBuckets(CommandLine& cmds, BB& bb) { 
-   std::list<BB_Bucket>& buckets = bb.getBuckets(false, true);
+   const bool recurse = cmds.flagSet("-r");
+   std::list<BB_Bucket>& buckets = bb.getBuckets(recurse, true);
    std::list<BB_Bucket>::iterator bkt;
 
-   if (cmds.flagSet("-r")) {
-      for (bkt = buckets.begin(); bkt != buckets.end(); ++bkt) {
-          bb.getBucketContents(*bkt);
-          printBucket(*bkt, true);
-      }
-   } else {
-      std::cout << "Buckets:" << std::endl;
-      for (bkt = buckets.begin(); bkt != buckets.end(); ++bkt) {
-          std::cout << bkt->name << " (" << bkt->id << ")" << std::endl;
+   std::cout << "Buckets:" << std::endl;
+   for (bkt = buckets.begin(); bkt != buckets.end(); ++bkt) {
+      if (recurse) {
+         printBucket(*bkt, true);
+      } else {
+         std::cout << bkt->name << " (" << bkt->id << ")" << std::endl;
       }
    }
 }
