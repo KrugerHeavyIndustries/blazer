@@ -24,33 +24,4 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include "command_create_bucket.h"
 
-#include "commandline.h" 
-#include "bb.h" 
-
-namespace khi { 
-namespace command { 
-
-using namespace std;
-
-bool CreateBucket::valid(size_t wordc) { 
-   return wordc > 1;
-}
-
-int CreateBucket::execute(size_t wordc, CommandLine& cmds, BB& bb) {
-   int idx = 1;
-   string bucketName;
-   parse1(idx, cmds, bucketName);
-   bb.createBucket(bucketName);
-   return EXIT_SUCCESS;
-}
-
-void CreateBucket::printUsage() {
-   cout << "Create a bucket in backblaze:" << endl;
-   cout << "\tblazer create_bucket BUCKET_NAME" << endl;
-   cout << endl;
-}
-
-} // namespace khi
-} // namespace command

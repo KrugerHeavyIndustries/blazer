@@ -49,7 +49,7 @@ void Base::printBucket(const BB_Bucket& bucket, bool bucketName) {
 
 void Base::printObject(const BB_Object& object, bool longFormat) { 
    if (longFormat) {
-      cout << object.id << endl;
+      cout << " FileId: " << object.id << endl;
       cout << " FileName: " << object.name << endl;
       cout << " ContentLength: " << object.contentLength << endl;
       cout << " ContentType: " << object.contentType << endl;

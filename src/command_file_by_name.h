@@ -30,9 +30,11 @@
 #include "command.h" 
 
 class CommandLine; 
-class BB;
 
 namespace khi {
+
+class BB; 
+
 namespace command { 
 
 struct FileByName : Base { 

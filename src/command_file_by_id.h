@@ -30,7 +30,7 @@
 #include "command.h" 
 
 class CommandLine; 
-class BB;
+using khi::BB;
 
 namespace khi { 
 namespace command { 

@@ -33,9 +33,12 @@
 #include <algorithm>
 
 class CommandLine;
-class BB;
+
+namespace khi {
 class BB_Bucket;
 class BB_Object; 
+class BB;
+}
 
 namespace khi { 
 namespace command { 
@@ -103,6 +106,7 @@ struct Dispatcher : public std::map<std::string, Base*> {
 #include "command_file_by_name.h"
 #include "command_create_bucket.h"
 #include "command_delete_bucket.h"
+#include "command_list_file_versions.h"
 
 #endif // COMMAND_H
 

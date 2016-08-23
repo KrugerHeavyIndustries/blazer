@@ -24,81 +24,28 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef JSON_H
-#define JSON_H
+#include "command_delete_file_version.h"
 
-#include <string>
-#include <stdint.h>
+#include <iostream>
 
-struct json_t; 
+namespace khi { 
+namespace command { 
 
-namespace khi {
+using namespace std;
 
-class Json { 
-   public: 
+bool DeleteFileVersion::valid(size_t wordc) {
+   return (wordc == 2 || wordc == 3);
+}
 
-      Json(const Json& json);
+int DeleteFileVersion::execute(size_t wordc, CommandLine& cmds, BB& bb) {
+   return 0;
+}
 
-      ~Json();
+void DeleteFileVersion::printUsage() {
+   cout << "Delete a retained versions of a file:" << endl;
+   cout << "\tblazer delete_file_version <FILENAME> <FILE_ID>" << endl;
+   cout << endl;
+}
 
-      Json& operator=(const Json& json);
-   
-      bool isObject() const;
-
-      bool isArray() const; 
-
-      bool isString() const;
-
-      bool isInteger() const;
-
-      bool isReal() const;
-
-      bool isBoolean() const;
-
-      std::string dump();
-
-      template<typename ValueType>
-      ValueType get() const
-      { 
-         return internalGet(static_cast<ValueType*>(NULL));
-      }
-      
-      Json get(const std::string& key) const;
-
-      Json at(int index) const;
-
-      void set(const std::string& key, const Json& json);
-
-      int size() const;
-
-      static Json load(const std::string&);
-
-      static Json object();
-
-      static Json string(const std::string& value);
-
-      static Json integer(int i);
-
-      static Json array();
-
-   private: 
-
-      Json(); 
-
-      Json(json_t* json); 
-
-      bool internalGet(bool*) const; 
-
-      double internalGet(double*) const; 
-
-      int internalGet(int*) const; 
-
-      uint64_t internalGet(uint64_t*) const; 
-
-      std::string internalGet(std::string*) const;
-
-      json_t* m_json;
-};
-
+} // namespace command
 } // namespace khi
-#endif // JSON_H

@@ -77,6 +77,10 @@ Json Json::string(const std::string& value) {
    return Json(json_string(value.c_str()));
 }
 
+Json Json::integer(int value) {
+   return Json(json_integer(value));
+}
+
 Json Json::array() { 
    return Json(json_array());
 }

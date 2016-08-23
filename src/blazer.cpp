@@ -61,6 +61,7 @@ int main(int argc, char * argv[]) {
    commands.add<FileByName>("get_file_by_name");
    commands.add<CreateBucket>("create_bucket");
    commands.add<DeleteBucket>("delete_bucket");
+   commands.add<ListFileVersions>("list_file_versions");
 
    MimeTypes::initialize();
     

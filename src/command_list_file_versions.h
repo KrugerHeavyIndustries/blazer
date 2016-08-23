@@ -24,81 +24,34 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef JSON_H
-#define JSON_H
+#ifndef COMMAND_LIST_FILE_VERSIONS_H
+#define COMMAND_LIST_FILE_VERSIONS_H
 
-#include <string>
-#include <stdint.h>
+#include "command.h"
 
-struct json_t; 
+#include <list> 
 
-namespace khi {
+namespace khi { 
+namespace command { 
 
-class Json { 
-   public: 
+struct ListFileVersions : Base { 
 
-      Json(const Json& json);
+   bool valid(size_t wordc);
 
-      ~Json();
+   int execute(size_t wordc, CommandLine& cmds, BB& bb);
 
-      Json& operator=(const Json& json);
-   
-      bool isObject() const;
-
-      bool isArray() const; 
-
-      bool isString() const;
-
-      bool isInteger() const;
-
-      bool isReal() const;
-
-      bool isBoolean() const;
-
-      std::string dump();
-
-      template<typename ValueType>
-      ValueType get() const
-      { 
-         return internalGet(static_cast<ValueType*>(NULL));
-      }
-      
-      Json get(const std::string& key) const;
-
-      Json at(int index) const;
-
-      void set(const std::string& key, const Json& json);
-
-      int size() const;
-
-      static Json load(const std::string&);
-
-      static Json object();
-
-      static Json string(const std::string& value);
-
-      static Json integer(int i);
-
-      static Json array();
+   void printUsage();
 
    private: 
 
-      Json(); 
+   const std::list<BB_Object> select(size_t wordc, CommandLine& cmds, BB& bb);
 
-      Json(json_t* json); 
+   int listFiles(const std::list<BB_Object>& objects);
 
-      bool internalGet(bool*) const; 
-
-      double internalGet(double*) const; 
-
-      int internalGet(int*) const; 
-
-      uint64_t internalGet(uint64_t*) const; 
-
-      std::string internalGet(std::string*) const;
-
-      json_t* m_json;
+   int maxFileCount(const std::string& str);
 };
 
 } // namespace khi
-#endif // JSON_H
+} // namespace commands
+
+#endif // COMMAND_LIST_FILE_VERSIONS_H

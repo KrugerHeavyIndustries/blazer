@@ -43,6 +43,10 @@ namespace RestClient {
    class Connection;
 }
 
+namespace khi {
+
+class Json;
+
 struct BB_Object { 
    std::string id;
    std::string name;
@@ -70,24 +74,26 @@ class BB {
    std::string m_accountId;
    std::string m_applicationKey;
    
-   Session m_session; 
+   Session m_session;
 
    std::list<BB_Bucket> m_buckets;
 
-   static const std::string API_URL_PATH; 
+   static const std::string API_URL_PATH;
     
    static void parseBucketsList(std::list<BB_Bucket>& buckets, const std::string& json);
    static void parseObjectsList(std::list<BB_Object>& objects, const std::string& xml);
+   static BB_Object parseObject(const Json& json);
+   static void parseError(const Json& json);
    
-   struct UploadUrlInfo { 
-      std::string bucketId; 
-      std::string uploadUrl; 
+   struct UploadUrlInfo {
+      std::string bucketId;
+      std::string uploadUrl;
       std::string authorizationToken;
    };
 
-   bool getUploadUrl(UploadUrlInfo& info); 
+   bool getUploadUrl(UploadUrlInfo& info);
     
-  public:
+   public:
 
    BB(const std::string& accountId, const std::string& applicationKey);
    ~BB();
@@ -100,13 +106,23 @@ class BB {
     
    void uploadFile(const std::string& bucket, const std::string& name, const std::string& contentType);
    
-   void downloadFileById(const std::string& key, std::ofstream& fout); 
+   void downloadFileById(const std::string& key, std::ofstream& fout);
      
-   void downloadFileByName(const std::string& bucket, const std::string& name, std::ofstream& fout); 
+   void downloadFileByName(const std::string& bucket, const std::string& fileName, std::ofstream& fout);
 
-   void createBucket(const std::string& bucketName); 
+   void deleteFileVersion(const std::string& fileName, const std::string& fileId);
+
+   void createBucket(const std::string& bucketName);
    
    void deleteBucket(const std::string& bucketId);
+
+   void updateBucket(const std::string& bucketId, const std::string& bucketType);
+
+   std::list<BB_Object> listFileVersions(const std::string& bucketId, const std::string& startFileName = "", const std::string& startFileId = "", int maxFileCount = 0);
+
+   const BB_Object getFileInfo(const std::string& fileId);
+
+   void hideFile(const std::string& bucketName, const std::string& fileName);
 
    private:
 
@@ -118,4 +134,6 @@ class BB {
 
    void getBucketContents(RestClient::Connection* connection, BB_Bucket& bucket);
 };
-#endif // BLAZER_IO_H 
+
+} // namespace khi
+#endif // BLAZER_IO_H

@@ -24,81 +24,33 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef JSON_H
-#define JSON_H
+#include "command_update_bucket.h"
 
-#include <string>
-#include <stdint.h>
-
-struct json_t; 
+#include "bb.h"
 
 namespace khi {
+namespace command {
 
-class Json { 
-   public: 
+using namespace std;
 
-      Json(const Json& json);
+bool UpdateBucket::valid(size_t wordc) {
+   return (wordc == 3);
+}
 
-      ~Json();
+int UpdateBucket::execute(size_t wordc, CommandLine& cmds, BB& bb) {
+   int idx = 1;
+   string bucketId; 
+   string bucketType;
+   parse2(idx, cmds, bucketId, bucketType);
+   bb.updateBucket(bucketId, bucketType);
+   return EXIT_SUCCESS;
+}
 
-      Json& operator=(const Json& json);
-   
-      bool isObject() const;
+void UpdateBucket::printUsage() {
+   cout << "Update the bucketType (allPrivate | allPublic) of a bucket:" << endl;
+   cout << "\tblazer update_bucket BUCKET_ID" << endl;
+   cout << endl;
+}
 
-      bool isArray() const; 
-
-      bool isString() const;
-
-      bool isInteger() const;
-
-      bool isReal() const;
-
-      bool isBoolean() const;
-
-      std::string dump();
-
-      template<typename ValueType>
-      ValueType get() const
-      { 
-         return internalGet(static_cast<ValueType*>(NULL));
-      }
-      
-      Json get(const std::string& key) const;
-
-      Json at(int index) const;
-
-      void set(const std::string& key, const Json& json);
-
-      int size() const;
-
-      static Json load(const std::string&);
-
-      static Json object();
-
-      static Json string(const std::string& value);
-
-      static Json integer(int i);
-
-      static Json array();
-
-   private: 
-
-      Json(); 
-
-      Json(json_t* json); 
-
-      bool internalGet(bool*) const; 
-
-      double internalGet(double*) const; 
-
-      int internalGet(int*) const; 
-
-      uint64_t internalGet(uint64_t*) const; 
-
-      std::string internalGet(std::string*) const;
-
-      json_t* m_json;
-};
-
+} // namespace command
 } // namespace khi
-#endif // JSON_H
