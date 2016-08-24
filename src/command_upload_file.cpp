@@ -56,7 +56,7 @@ int UploadFile::execute(size_t wordc, CommandLine& cmds, BB& bb) {
 
 void UploadFile::printUsage() { 
    cout << "Upload file to backblaze:" << endl;
-   cout << "\tblazer put BUCKET_NAME FILE_NAME [FILE_PATH]" << endl;
+   cout << "\tblazer upload_file BUCKET_NAME FILE_NAME [FILE_PATH]" << endl;
    cout << "[OPTIONS] = [-tTYPE]" << endl;
    cout << "TYPE: a MIME content-type" << endl;
    cout << endl;

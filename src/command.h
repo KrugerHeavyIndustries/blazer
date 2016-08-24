@@ -104,8 +104,12 @@ struct Dispatcher : public std::map<std::string, Base*> {
 #include "command_upload_file.h"
 #include "command_file_by_id.h" 
 #include "command_file_by_name.h"
+#include "command_get_file_info.h"
+#include "command_hide_file.h"
+#include "command_delete_file_version.h"
 #include "command_create_bucket.h"
 #include "command_delete_bucket.h"
+#include "command_update_bucket.h"
 #include "command_list_file_versions.h"
 
 #endif // COMMAND_H

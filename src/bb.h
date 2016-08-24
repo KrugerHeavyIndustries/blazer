@@ -83,7 +83,7 @@ class BB {
    static void parseBucketsList(std::list<BB_Bucket>& buckets, const std::string& json);
    static void parseObjectsList(std::list<BB_Object>& objects, const std::string& xml);
    static BB_Object parseObject(const Json& json);
-   static void parseError(const Json& json);
+   static void parseErrorThrow(const Json& json);
    
    struct UploadUrlInfo {
       std::string bucketId;
@@ -126,7 +126,7 @@ class BB {
 
    private:
 
-   RestClient::Connection* connect(const std::string& baseUrl);
+   std::auto_ptr<RestClient::Connection> connect(const std::string& baseUrl);
  
    std::string listBuckets(RestClient::Connection* connection);
     

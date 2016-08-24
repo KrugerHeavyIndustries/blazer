@@ -24,34 +24,47 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include "command_get_file_info.h"
+#ifndef KHI_EXCEPTION_H
+#define KHI_EXCEPTION_H
 
-#include <iostream>
-
-#include "bb.h"
+#include <string>
+#include <exception>
 
 namespace khi {
-namespace command { 
 
-using namespace std;
+class Exception : public std::exception {
 
-bool GetFileInfo::valid(size_t wordc) { 
-   return wordc == 2;
-}
+	public:
+   
+   explicit Exception() {}; 
 
-int GetFileInfo::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
-   int idx = 1;
-   string fileId;
-   parse1(idx, cmds, fileId);
-   printObject(bb.getFileInfo(fileId));
-   return EXIT_SUCCESS;
-}
+   virtual ~Exception() throw() {};
+};
 
-void GetFileInfo::printUsage() { 
-   cout << "Get known meta information about a file in Backblaze:" << endl;
-   cout << "\tblazer get_file_info FILE_ID" << endl;
-   cout << endl;
-}
+class ResponseError : Exception {
+   public:
 
-} // namespace command
+   explicit ResponseError(int fs, const std::string& fc, const std::string& fm) :
+      status(fs), code(fc), message(fm) {};
+
+   ~ResponseError() throw() {};
+
+   virtual const char* what() const throw() {
+      return makeWhat().c_str();
+   }; 
+
+   std::string makeWhat() const {
+      static char tmp[4];
+      snprintf(tmp, sizeof(tmp), "%d", status);
+      return std::string(tmp) + " " + code + " - " + message;
+   }
+
+   int status;
+   std::string code;
+   std::string message;
+};
+
+
 } // namespace khi
+
+#endif // KHI_EXCEPTION_H

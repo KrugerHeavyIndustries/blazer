@@ -32,7 +32,7 @@
 namespace khi {
 namespace command {
 
-class DeleteFileVersion : Base {
+struct DeleteFileVersion : Base {
 
    bool valid(size_t wordc); 
 

@@ -43,16 +43,16 @@ struct CommandLine {
     // -X value or -Xvalue, where -x is a flag from this set.
     // Flags that have parameter values must always take that value, defaults are not
     // supported.
-    std::set<std::string> flagParams;
+    std::set<std::string> flags;
     
-    bool flagSet(const std::string & flag) const { return opts.exists(flag); }
+    bool hasFlag(const std::string & flag) const { return opts.exists(flag); }
     
     void parse(int argc, char* argv[]) {
         int j = 0;
         while (j < argc) {
             if (argv[j][0] == '-') {
                 std::string flag = std::string(argv[j], 0, 2), value;
-                if (flagParams.find(flag) != flagParams.end()) {
+                if (flags.find(flag) != flags.end()) {
                     // is flag with parameter
                     if (strlen(argv[j]) == 2 && argc >= j+1)
                         opts.insert(flag, argv[++j]);// value is next string, insert and skip

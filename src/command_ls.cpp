@@ -61,7 +61,7 @@ void Ls::printUsage() {
 }
 
 void Ls::listBuckets(CommandLine& cmds, BB& bb) { 
-   const bool recurse = cmds.flagSet("-r");
+   const bool recurse = cmds.hasFlag("-r");
    std::list<BB_Bucket>& buckets = bb.getBuckets(recurse, true);
    std::list<BB_Bucket>::iterator bkt;
 

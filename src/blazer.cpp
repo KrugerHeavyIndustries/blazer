@@ -24,13 +24,6 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
    
-#include "bb.h"
-#include "coding.h"
-#include "mimetypes.h"
-#include "multidict.h"
-#include "commandline.h"
-#include "command.h"
-
 #include <cmath>
 #include <exception>
 #include <stdexcept>
@@ -38,6 +31,14 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <sys/param.h>
+
+#include "bb.h"
+#include "coding.h"
+#include "mimetypes.h"
+#include "multidict.h"
+#include "commandline.h"
+#include "command.h"
+#include "exceptions.h"
 
 #define PATH_BLAZER_DIR ".blazer"
 
@@ -55,21 +56,25 @@ int main(int argc, char * argv[]) {
 
    Dispatcher commands;
 
+   commands.add<CreateBucket>("create_bucket");
+   commands.add<DeleteBucket>("delete_bucket");
+   commands.add<UpdateBucket>("update_bucket");
    commands.add<Ls>("ls");
    commands.add<UploadFile>("upload_file");
    commands.add<FileById>("get_file_by_id");
    commands.add<FileByName>("get_file_by_name");
-   commands.add<CreateBucket>("create_bucket");
-   commands.add<DeleteBucket>("delete_bucket");
+   commands.add<GetFileInfo>("get_file_info");
+   commands.add<HideFile>("hide_file");
    commands.add<ListFileVersions>("list_file_versions");
+   commands.add<DeleteFileVersion>("delete_file_version");
 
    MimeTypes::initialize();
     
    CommandLine cmds;
-   cmds.flagParams.insert("-v"); // verbosity level
-   cmds.flagParams.insert("-c"); // credentials file
-   cmds.flagParams.insert("-t"); // type (Content-Type)
-   cmds.flagParams.insert("-m"); // metadata
+   cmds.flags.insert("-v"); // verbosity level
+   cmds.flags.insert("-c"); // credentials file
+   cmds.flags.insert("-t"); // type (Content-Type)
+   cmds.flags.insert("-m"); // metadata
    cmds.parse(argc, argv);
    size_t wordc = cmds.words.size();
     
@@ -83,7 +88,7 @@ int main(int argc, char * argv[]) {
    struct passwd* pw = getpwuid(geteuid());
    string home(pw->pw_dir);
 
-   if (cmds.flagSet("-v")) {
+   if (cmds.hasFlag("-v")) {
        verbosity = cmds.opts.getWithDefault("-v", 2);
        if(verbosity > 0)
            cout << "Verbose output level " << verbosity << endl;
@@ -91,7 +96,7 @@ int main(int argc, char * argv[]) {
     
    ifstream file;
         
-   if (cmds.flagSet("-c")) {
+   if (cmds.hasFlag("-c")) {
        string givenFilePath = cmds.opts.getWithDefault("-c", "");
        loadBlazerFile(givenFilePath, accountId, applicationKey, name);
    } else {
@@ -143,8 +148,12 @@ int main(int argc, char * argv[]) {
 
          result = commands[cmds.words[0]]->execute(cmds.words.size(), cmds, bb);
       }
-      catch(std::runtime_error & err) {
+      catch(std::runtime_error& err) {
          cerr << "ERROR: " << err.what() << endl;
+         return EXIT_FAILURE;
+      }
+      catch(ResponseError& err0) { 
+         cerr << err0.what() << endl;
          return EXIT_FAILURE;
       }
    } else {

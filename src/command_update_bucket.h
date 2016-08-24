@@ -32,7 +32,7 @@
 namespace khi {
 namespace command {
 
-class UpdateBucket : Base {
+struct UpdateBucket : Base {
 
    bool valid(size_t wordc);
 

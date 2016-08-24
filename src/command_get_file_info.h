@@ -24,4 +24,25 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
+#ifndef COMMAND_GET_FILE_INFO_H
+#define COMMAND_GET_FILE_INFO_H
+
+#include "command.h"
+
+namespace khi {
+namespace command {
+
+struct GetFileInfo : Base {
+
+   virtual bool valid(size_t wordc);
+
+   virtual int execute(size_t wordc, CommandLine& cmds, BB& bb);
+
+   virtual void printUsage();
+};
+
+} // namespace command
+} // namespace khi
+
+#endif // COMMAND_GET_FILE_INFO_H
 
