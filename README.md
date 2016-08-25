@@ -30,9 +30,14 @@ use it. These details live in the blazer configuration file.
 
     blazer (help)
     blazer create_bucket <bucketName>
-    blazer delete_bucket <bucketId>
-    blazer get_file_by_id <fileId> <localFileName>
-    blazer get_file_by_name <bucketName> <fileName> <localFileName>
-    blazer ls [-r]
-    blazer upload_file <fileName> 
+    blazer delete_bucket <bucketName>
+    blazer list_buckets
+    blazer update_bucket <bucketName> [allPublic | allPrivate]
+    blazer download_file_by_id <fileId> <localFileName>
+    blazer dowload_file_by_name <bucketName> <remotFileName> <localFileName>
+    blazer delete_file_version <fileName> <fileId>
+    blazer get_file_info <fileId>
+    blazer hide_file <bucketName> <fileName>
+    blazer ls <bucketName>
+    blazer upload_file [-t <contentType>] <bucketName> <localFilePath> <remoteFilePath>
 
