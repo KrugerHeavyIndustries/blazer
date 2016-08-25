@@ -55,14 +55,24 @@ struct Base {
 
    protected: 
    
-   void printBucket(const BB_Bucket& bucket, bool bucketName = false);
+   void printBucket(const BB_Bucket& bucket, bool bucketName = false) const;
 
-   void printObject(const BB_Object& object, bool longFormat = false);
+   void printObject(const BB_Object& object, bool longFormat = false) const;
 
    void parse1(int& idx, const CommandLine& cmds, std::string& position1); 
 
    void parse2(int& idx, const CommandLine& cmds, std::string& position1, std::string& position2);
 
+   struct PrintObject : public std::unary_function<BB_Object, void> { 
+      const Base& m_command;
+      PrintObject(const Base& command) : m_command(command) {
+      }
+      void operator()(const BB_Object& file) const { 
+         m_command.printObject(file);
+      } 
+   };
+
+   friend struct PrintObject;
 };
 
 struct Dispatcher : public std::map<std::string, Base*> { 
@@ -104,13 +114,14 @@ struct Dispatcher : public std::map<std::string, Base*> {
 #include "command_upload_file.h"
 #include "command_file_by_id.h" 
 #include "command_file_by_name.h"
+#include "command_list_file_versions.h"
 #include "command_get_file_info.h"
 #include "command_hide_file.h"
 #include "command_delete_file_version.h"
 #include "command_create_bucket.h"
 #include "command_delete_bucket.h"
 #include "command_update_bucket.h"
-#include "command_list_file_versions.h"
+#include "command_list_buckets.h"
 
 #endif // COMMAND_H
 

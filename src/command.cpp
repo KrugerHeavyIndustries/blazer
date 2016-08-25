@@ -36,7 +36,7 @@ namespace command {
 
 using namespace std;
 
-void Base::printBucket(const BB_Bucket& bucket, bool bucketName) { 
+void Base::printBucket(const BB_Bucket& bucket, bool bucketName) const { 
    if (bucketName)
       cout << bucket.name << " (" << bucket.id << ")" << endl;
    list<BB_Object>::const_iterator obj;
@@ -47,7 +47,7 @@ void Base::printBucket(const BB_Bucket& bucket, bool bucketName) {
    }
 }
 
-void Base::printObject(const BB_Object& object, bool longFormat) { 
+void Base::printObject(const BB_Object& object, bool longFormat) const { 
    if (longFormat) {
       cout << " FileId: " << object.id << endl;
       cout << " FileName: " << object.name << endl;
@@ -57,13 +57,7 @@ void Base::printObject(const BB_Object& object, bool longFormat) {
       cout << " Action: " << object.action << endl; 
       cout << " UploadTimestamp: " << object.uploadTimestamp << endl;
    } else { 
-      cout << object.id;
-      cout << " " << object.name;
-      cout << " " << object.contentLength;
-      cout << " " << object.contentType; 
-      cout << " " << object.contentSha1; 
-      cout << " " << object.action; 
-      cout << " " << object.uploadTimestamp;
+      cout << object.id << " " << object.name << endl;
    }
 }
 

@@ -49,7 +49,7 @@ int GetFileInfo::execute(size_t wordc, CommandLine& cmds, BB& bb) {
 
 void GetFileInfo::printUsage() { 
    cout << "Get known meta information about a file in Backblaze:" << endl;
-   cout << "\tblazer get_file_info FILE_ID" << endl;
+   cout << "\tblazer get_file_info <fileId>" << endl;
    cout << endl;
 }
 

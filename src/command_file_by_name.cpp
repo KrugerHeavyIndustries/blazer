@@ -35,26 +35,26 @@ namespace command {
 using namespace std;
 
 bool FileByName::valid(size_t wordc) { 
-   return wordc > 1;
+   return wordc == 4;
 }
 
 int FileByName::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
-   string bucketName; 
-   string fileName;
    int idx = 1;
+   string bucketName; 
+   string remoteFileName;
 
-   parse2(idx, cmds, bucketName, fileName);
+   parse2(idx, cmds, bucketName, remoteFileName);
 
-   string filePath = (idx < (int)cmds.words.size()) ? cmds.words[idx] : fileName;
-   ofstream fout(filePath.c_str(), ios_base::binary | ios_base::out);
-   bb.downloadFileByName(bucketName, fileName, fout);
+   string localFilePath = cmds.words[idx];
+   ofstream fout(localFilePath.c_str(), ios_base::binary | ios_base::out);
+   bb.downloadFileByName(bucketName, remoteFileName, fout);
 
    return EXIT_SUCCESS;
 }
 
 void FileByName::printUsage() { 
    cout << "Download file from backblaze:" << endl;
-   cout << "\tblazer get BUCKET_NAME FILE_NAME [FILE_PATH]" << endl;
+   cout << "\tblazer download_by_file_name <bucketName> <remoteFileName> <localFilePath>" << endl;
    cout << endl;
 }
 

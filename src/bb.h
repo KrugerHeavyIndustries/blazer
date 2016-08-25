@@ -80,10 +80,13 @@ class BB {
 
    static const std::string API_URL_PATH;
     
-   static void parseBucketsList(std::list<BB_Bucket>& buckets, const std::string& json);
-   static void parseObjectsList(std::list<BB_Object>& objects, const std::string& xml);
-   static BB_Object parseObject(const Json& json);
-   static void parseErrorThrow(const Json& json);
+   static std::list<BB_Bucket> unpackBucketsList(const std::string& json);
+
+   static std::list<BB_Object> unpackObjectsList(const std::string& json);
+
+   static BB_Object unpackObject(const Json& json);
+
+   static void throwResponseError(const Json& json);
    
    struct UploadUrlInfo {
       std::string bucketId;
@@ -101,14 +104,16 @@ class BB {
    void authorize();
 
    std::list<BB_Bucket>& getBuckets(bool getContents, bool refresh);
+
+   BB_Bucket getBucket(const std::string& bucketName); 
                                      
    void refreshBuckets(bool getContents);
     
-   void uploadFile(const std::string& bucket, const std::string& name, const std::string& contentType);
+   void uploadFile(const std::string& bucketName, const std::string& localFileName, const std::string& remoteFileName, const std::string& contentType);
    
-   void downloadFileById(const std::string& key, std::ofstream& fout);
+   void downloadFileById(const std::string& fileId, std::ofstream& fout);
      
-   void downloadFileByName(const std::string& bucket, const std::string& fileName, std::ofstream& fout);
+   void downloadFileByName(const std::string& bucketName, const std::string& remoteFileName, std::ofstream& fout);
 
    void deleteFileVersion(const std::string& fileName, const std::string& fileId);
 
@@ -119,6 +124,8 @@ class BB {
    void updateBucket(const std::string& bucketId, const std::string& bucketType);
 
    std::list<BB_Object> listFileVersions(const std::string& bucketId, const std::string& startFileName = "", const std::string& startFileId = "", int maxFileCount = 0);
+   
+   std::list<BB_Object> listBucket(const std::string& bucketName, const std::string& folderName = "");
 
    const BB_Object getFileInfo(const std::string& fileId);
 
@@ -128,11 +135,7 @@ class BB {
 
    std::auto_ptr<RestClient::Connection> connect(const std::string& baseUrl);
  
-   std::string listBuckets(RestClient::Connection* connection);
-    
-   std::string listBucket(RestClient::Connection* connection, const std::string& bkt);
-
-   void getBucketContents(RestClient::Connection* connection, BB_Bucket& bucket);
+   std::list<BB_Bucket> listBuckets();
 };
 
 } // namespace khi

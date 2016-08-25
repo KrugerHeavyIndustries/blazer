@@ -44,21 +44,20 @@ bool UploadFile::valid(size_t wordc) {
 int UploadFile::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
    int idx = 1;
    string bucketName;
-   string fileName; 
+   string localFilePath; 
 
-   parse2(idx, cmds, bucketName, fileName); 
+   parse2(idx, cmds, bucketName, localFilePath);
 
-   string contentType = cmds.opts.exists("-t") ? cmds.opts.getWithDefault("-t", "") : MimeTypes::matchByExtension(fileName); 
+   string remoteFileName = cmds.words[idx];
+   string contentType = cmds.opts.exists("-t") ? cmds.opts.getWithDefault("-t", "") : MimeTypes::matchByExtension(localFilePath); 
 
-   bb.uploadFile(bucketName, fileName, contentType);
+   bb.uploadFile(bucketName, localFilePath, remoteFileName, contentType);
    return EXIT_SUCCESS;
 }
 
 void UploadFile::printUsage() { 
    cout << "Upload file to backblaze:" << endl;
-   cout << "\tblazer upload_file BUCKET_NAME FILE_NAME [FILE_PATH]" << endl;
-   cout << "[OPTIONS] = [-tTYPE]" << endl;
-   cout << "TYPE: a MIME content-type" << endl;
+   cout << "\tblazer upload_file [-t <contentType>] <bucketName> <localFilePath> <remoteFileName>" << endl;
    cout << endl;
 }
 

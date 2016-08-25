@@ -40,15 +40,15 @@ bool DeleteBucket::valid(size_t wordc) {
 
 int DeleteBucket::execute(size_t wordc, CommandLine& cmds, BB& bb) {
    int idx = 1;
-   string bucketId;
-   parse1(idx, cmds, bucketId);
-   bb.deleteBucket(bucketId);
+   string bucketName;
+   parse1(idx, cmds, bucketName);
+   bb.deleteBucket(bb.getBucket(bucketName).id);
    return EXIT_SUCCESS;
 }
 
 void DeleteBucket::printUsage() { 
    cout << "Delete bucket in backblaze:" << endl;
-   cout << "\tblazer delete_bucket BUCKET_NAME" << endl;
+   cout << "\tblazer delete_bucket <bucketName>" << endl;
    cout << endl;
 }
 

@@ -38,12 +38,12 @@ bool DeleteFileVersion::valid(size_t wordc) {
 }
 
 int DeleteFileVersion::execute(size_t wordc, CommandLine& cmds, BB& bb) {
-   return 0;
+   return EXIT_SUCCESS;
 }
 
 void DeleteFileVersion::printUsage() {
    cout << "Delete a retained versions of a file:" << endl;
-   cout << "\tblazer delete_file_version <FILENAME> <FILE_ID>" << endl;
+   cout << "\tblazer delete_file_version <fileName> <fileId>" << endl;
    cout << endl;
 }
 

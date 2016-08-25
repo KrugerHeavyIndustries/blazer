@@ -59,10 +59,11 @@ int main(int argc, char * argv[]) {
    commands.add<CreateBucket>("create_bucket");
    commands.add<DeleteBucket>("delete_bucket");
    commands.add<UpdateBucket>("update_bucket");
-   commands.add<Ls>("ls");
+   commands.add<ListBuckets>("list_buckets");
    commands.add<UploadFile>("upload_file");
-   commands.add<FileById>("get_file_by_id");
-   commands.add<FileByName>("get_file_by_name");
+   commands.add<Ls>("ls");
+   commands.add<FileById>("download_file_by_id");
+   commands.add<FileByName>("download_file_by_name");
    commands.add<GetFileInfo>("get_file_info");
    commands.add<HideFile>("hide_file");
    commands.add<ListFileVersions>("list_file_versions");
@@ -148,11 +149,11 @@ int main(int argc, char * argv[]) {
 
          result = commands[cmds.words[0]]->execute(cmds.words.size(), cmds, bb);
       }
-      catch(std::runtime_error& err) {
+      catch (std::runtime_error& err) {
          cerr << "ERROR: " << err.what() << endl;
          return EXIT_FAILURE;
       }
-      catch(ResponseError& err0) { 
+      catch (ResponseError& err0) { 
          cerr << err0.what() << endl;
          return EXIT_FAILURE;
       }

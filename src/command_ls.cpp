@@ -27,6 +27,8 @@
 #include "command_ls.h"
 
 #include <ostream>
+#include <algorithm>
+#include <functional>
 
 #include "bb.h"
 #include "commandline.h"
@@ -34,45 +36,33 @@
 namespace khi { 
 namespace command { 
 
+using std::string; 
+using std::list;
+
 bool Ls::valid(size_t wordc) {
-   return (wordc == 1 || wordc == 2 || wordc == 3);
+   return (wordc == 2 || wordc == 3);
 }
 
 int Ls::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
-   switch (wordc) {
-   case 1:
-      listBuckets(cmds, bb);
-      return EXIT_SUCCESS;
-   case 2:
-   case 3:
-      return EXIT_SUCCESS;
-   }
-   return EXIT_FAILURE;
+   listBucket(cmds, bb);
+   return EXIT_SUCCESS;
 }
 
 void Ls::printUsage() { 
-    std::cout << "List all buckets:" << std::endl;
-    std::cout << "\tblazer ls" << std::endl;
-    std::cout << "List all buckets with contents:" << std::endl;
-    std::cout << "\tblazer -r ls" << std::endl;
-    std::cout << "List contents of bucket or object from bucket:" << std::endl;
-    std::cout << "\tblazer ls BUCKET_NAME [OBJECT_KEY]" << std::endl;
+    std::cout << "List bucket contents:" << std::endl;
+    std::cout << "\tblazer ls <bucketName> [folderName]" << std::endl;
     std::cout << std::endl;
 }
 
-void Ls::listBuckets(CommandLine& cmds, BB& bb) { 
-   const bool recurse = cmds.hasFlag("-r");
-   std::list<BB_Bucket>& buckets = bb.getBuckets(recurse, true);
-   std::list<BB_Bucket>::iterator bkt;
+void Ls::listBucket(CommandLine& cmds, BB& bb) {
+   int idx = 1; 
+   string bucketName;
+   string folderName;
 
-   std::cout << "Buckets:" << std::endl;
-   for (bkt = buckets.begin(); bkt != buckets.end(); ++bkt) {
-      if (recurse) {
-         printBucket(*bkt, true);
-      } else {
-         std::cout << bkt->name << " (" << bkt->id << ")" << std::endl;
-      }
-   }
+   parse2(idx, cmds, bucketName, folderName);
+
+   list<BB_Object> files = bb.listBucket(bucketName);
+   std::for_each(files.begin(), files.end(), PrintObject(*this)); 
 }
 
 } // namespace command

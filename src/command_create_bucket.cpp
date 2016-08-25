@@ -48,7 +48,7 @@ int CreateBucket::execute(size_t wordc, CommandLine& cmds, BB& bb) {
 
 void CreateBucket::printUsage() {
    cout << "Create a bucket in backblaze:" << endl;
-   cout << "\tblazer create_bucket BUCKET_NAME" << endl;
+   cout << "\tblazer create_bucket <bucketName>" << endl;
    cout << endl;
 }
 

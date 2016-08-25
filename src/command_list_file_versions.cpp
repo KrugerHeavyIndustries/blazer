@@ -46,7 +46,7 @@ int ListFileVersions::execute(size_t wordc, CommandLine& cmds, BB& bb) {
 
 void ListFileVersions::printUsage() { 
    cout << "Lists all the versions of all files contained in one bucket:" << endl;
-   cout << "\tblazer list_file_versions BUCKET_ID" << endl;
+   cout << "\tblazer list_file_versions <bucketName>" << endl;
    cout << endl;
 }
 

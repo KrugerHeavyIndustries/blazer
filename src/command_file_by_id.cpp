@@ -41,17 +41,17 @@ bool FileById::valid(size_t wordc) {
 int FileById::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
    int idx = 1;
    string fileId;
-   string outputFile;
+   string localFilePath;
 
-   parse2(idx, cmds, fileId, outputFile);
-   ofstream fout(outputFile.empty() ? fileId.c_str() : outputFile.c_str(), ios_base::binary | ios_base::out);
+   parse2(idx, cmds, fileId, localFilePath);
+   ofstream fout(localFilePath.empty() ? fileId.c_str() : localFilePath.c_str(), ios_base::binary | ios_base::out);
    bb.downloadFileById(fileId, fout);
    return EXIT_SUCCESS;
 }
 
 void FileById::printUsage() { 
    cout << "Download file from backblaze:" << endl;
-   cout << "\tblazer get BUCKET_NAME FILE_ID [FILE_PATH]" << endl;
+   cout << "\tblazer download_file_by_id <fileId> <localFilePath>" << endl;
    cout << endl;
 }
 

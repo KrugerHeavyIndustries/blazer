@@ -42,7 +42,8 @@ struct Ls : Base {
 
    private: 
    
-   void listBuckets(CommandLine&, BB&);
+   void listBucket(CommandLine& cmds, BB& bb);
 };
+
 }}
 #endif // COMMAND_LS_H

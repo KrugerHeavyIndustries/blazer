@@ -39,16 +39,16 @@ bool UpdateBucket::valid(size_t wordc) {
 
 int UpdateBucket::execute(size_t wordc, CommandLine& cmds, BB& bb) {
    int idx = 1;
-   string bucketId; 
+   string bucketName; 
    string bucketType;
-   parse2(idx, cmds, bucketId, bucketType);
-   bb.updateBucket(bucketId, bucketType);
+   parse2(idx, cmds, bucketName, bucketType);
+   bb.updateBucket(bb.getBucket(bucketName).id, bucketType);
    return EXIT_SUCCESS;
 }
 
 void UpdateBucket::printUsage() {
-   cout << "Update the bucketType (allPrivate | allPublic) of a bucket:" << endl;
-   cout << "\tblazer update_bucket BUCKET_ID" << endl;
+   cout << "Update the bucketType (allPublic | allPrivate) of a bucket:" << endl;
+   cout << "\tblazer update_bucket <bucketName> [allPublic | allPrivate]" << endl;
    cout << endl;
 }
 

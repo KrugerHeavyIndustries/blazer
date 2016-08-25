@@ -81,13 +81,13 @@ void BB::authorize() {
 
       RestClient::Response response = connection->get("/b2_authorize_account");
       if (response.code != 200) {
-         parseErrorThrow(khi::Json::load(response.body));
+         throwResponseError(Json::load(response.body));
       }
 
-      khi::Json json = khi::Json::load(response.body);
-      khi::Json downloadUrl = json.get("downloadUrl");
-      khi::Json apiUrl = json.get("apiUrl");
-      khi::Json authorizationToken = json.get("authorizationToken");
+      Json json = Json::load(response.body);
+      Json downloadUrl = json.get("downloadUrl");
+      Json apiUrl = json.get("apiUrl");
+      Json authorizationToken = json.get("authorizationToken");
 
       m_session.apiUrl = apiUrl.get<std::string>();
       m_session.downloadUrl = downloadUrl.get<std::string>();
@@ -103,74 +103,78 @@ auto_ptr<RestClient::Connection> BB::connect(const string& baseUrl) {
    return auto_ptr<RestClient::Connection>(connection);
 }
 
-void BB::parseBucketsList(list<BB_Bucket>& buckets, const string& json) {
-   khi::Json root = khi::Json::load(json); 
+list<BB_Bucket> BB::unpackBucketsList(const string& json) {
+   list<BB_Bucket> buckets;
+   Json root = Json::load(json); 
    if (root.isObject()) { 
-      khi::Json array = root.get("buckets");
+      Json array = root.get("buckets");
       if (array.isArray()) { 
          for (int i = 0; i < array.size(); ++i) { 
-            khi::Json elem = array.at(i);
+            Json elem = array.at(i);
             if (elem.isObject()) { 
-               khi::Json bucketId = elem.get("bucketId"); 
-               khi::Json bucketName = elem.get("bucketName"); 
-               khi::Json bucketType = elem.get("bucketType"); 
+               Json bucketId = elem.get("bucketId"); 
+               Json bucketName = elem.get("bucketName"); 
+               Json bucketType = elem.get("bucketType"); 
                buckets.push_back(BB_Bucket(bucketId.get<string>(), bucketName.get<string>(), bucketType.get<string>())); 
             }
          }
       }
    }
+   return buckets;
 }
 
-void BB::parseObjectsList(list<BB_Object>& objects, const string& json) {
-   khi::Json root = khi::Json::load(json); 
+list<BB_Object> BB::unpackObjectsList(const string& json) {
+   list<BB_Object> files;
+   Json root = Json::load(json); 
    if (root.isObject()) { 
-      khi::Json array = root.get("files");
+      Json array = root.get("files");
       if (array.isArray()) { 
          for (int i = 0; i < array.size(); ++i) { 
-           khi::Json elem = array.at(i);
+           Json elem = array.at(i);
             if (elem.isObject()) { 
-               objects.push_back(parseObject(elem));
+               files.push_back(unpackObject(elem));
             }
          }
       }
-      khi::Json nextFileName = root.get("nextFileName");
+      Json nextFileName = root.get("nextFileName");
    }
+   return files;
 }
 
-BB_Object BB::parseObject(const khi::Json& json) {
+BB_Object BB::unpackObject(const Json& json) {
    BB_Object object;
-   khi::Json action = json.get("action");
+   Json action = json.get("action");
    if (action.isString())
       object.action = action.get<string>();
 
-   khi::Json contentLength = json.get("contentLength");
+   Json contentLength = json.get("contentLength");
    if (contentLength.isInteger())
       object.contentLength = contentLength.get<int>();
 
-   khi::Json contentType = json.get("contentType");
+   Json contentType = json.get("contentType");
    if (contentType.isString())
       object.contentType = contentType.get<string>();
 
-   khi::Json contentSha1 = json.get("contentSha1");
+   Json contentSha1 = json.get("contentSha1");
    if (contentSha1.isString())
       object.contentSha1 = contentSha1.get<string>();
 
-   khi::Json fileId = json.get("fileId"); 
+   Json fileId = json.get("fileId"); 
    if (fileId.isString())
       object.id = fileId.get<string>();
 
-   khi::Json fileName = json.get("fileName");
+   Json fileName = json.get("fileName");
    if (fileName.isString()) 
       object.name = fileName.get<string>();
 
-   khi::Json uploadTimestamp = json.get("uploadTimestamp");
+   Json uploadTimestamp = json.get("uploadTimestamp");
    if (uploadTimestamp.isInteger()) 
       object.uploadTimestamp = uploadTimestamp.get<int>();
 
    return object;
 }
 
-void BB::parseErrorThrow(const Json& json) {
+void BB::throwResponseError(const Json& json) {
    int status = json.get("status").get<int>();
    string code = json.get("code").get<string>();
    string message = json.get("message").get<string>();
@@ -183,54 +187,49 @@ std::list<BB_Bucket>& BB::getBuckets(bool getContents, bool refresh) {
     return m_buckets;
 }
 
-void BB::refreshBuckets(bool getContents) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
-
-   RestClient::HeaderFields headers;
-   headers["Authorization"] = m_session.authorizationToken;
-   connection->SetHeaders(headers);
-
-   m_buckets.clear();
-   parseBucketsList(m_buckets, listBuckets(connection.get()));
-    
-   if (getContents) {
-       list<BB_Bucket>::iterator bkt;
-       for (bkt = m_buckets.begin(); bkt != m_buckets.end(); ++bkt)
-           getBucketContents(connection.get(), *bkt);
+BB_Bucket BB::getBucket(const string& bucketName) {
+   const std::list<BB_Bucket>& buckets = getBuckets(false, false);
+   list<BB_Bucket>::const_iterator it = std::find_if(buckets.begin(), buckets.end(), find_name(bucketName)); 
+   if (it == buckets.end()) { 
+      throw std::runtime_error("non existent bucket");
    }
+   return (*it);
 }
 
-void BB::getBucketContents(RestClient::Connection* connection, BB_Bucket& bucket) {
-    parseObjectsList(bucket.objects, listBucket(connection, bucket.id));
+void BB::refreshBuckets(bool getContents) {
+   m_buckets = listBuckets();
+   if (getContents) {
+      for (list<BB_Bucket>::iterator bkt = m_buckets.begin(); bkt != m_buckets.end(); ++bkt) { 
+         (*bkt).objects = listBucket((*bkt).name);
+      }
+   }
 }
 
 bool BB::getUploadUrl(UploadUrlInfo& info) { 
    auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
-   khi::Json payload = khi::Json::object();
-   payload.set("bucketId", khi::Json::string(info.bucketId));
+   Json payload = Json::object();
+   payload.set("bucketId", Json::string(info.bucketId));
    RestClient::Response response = connection->post("/b2_get_upload_url", payload.dump());
    if (response.code != 200) {
-      parseErrorThrow(khi::Json::load(response.body)); 
+      throwResponseError(Json::load(response.body)); 
    }
-   khi::Json json = khi::Json::load(response.body);
+   Json json = Json::load(response.body);
    info.bucketId = json.get("bucketId").get<string>();
    info.uploadUrl = json.get("uploadUrl").get<string>();
    info.authorizationToken = json.get("authorizationToken").get<string>();
    return true;
 }
 
-void BB::uploadFile(const string& bucket, const string& name, const string& type) { 
+void BB::uploadFile(const string& bucketName, const string& localFilePath, const string& remoteFileName, const string& contentType) { 
 
-   const list<BB_Bucket>& buckets = getBuckets(false, false);
-   list<BB_Bucket>::const_iterator it = std::find_if(buckets.begin(), buckets.end(), find_name(bucket)); 
+   BB_Bucket bucket = getBucket(bucketName);
 
    UploadUrlInfo uploadUrlInfo;
-   uploadUrlInfo.bucketId = it->id;
+   uploadUrlInfo.bucketId = bucket.id;
    if (getUploadUrl(uploadUrlInfo)) { 
-      ifstream fin(name.c_str(), ios::binary);
+      ifstream fin(localFilePath.c_str(), ios::binary);
       if(!fin.is_open()) {
-         cerr << "Could not read file " << name << endl;
-         return;
+         throw std::runtime_error("could not read file " + localFilePath);
       }
 
       uint8_t sha1[EVP_MAX_MD_SIZE];
@@ -248,8 +247,8 @@ void BB::uploadFile(const string& bucket, const string& name, const string& type
 
       RestClient::HeaderFields headers; 
       headers["Authorization"] = uploadUrlInfo.authorizationToken;
-      headers["Content-Type"] = type;
-      headers["X-Bz-File-Name"] = name;
+      headers["Content-Type"] = contentType;
+      headers["X-Bz-File-Name"] = remoteFileName;
       headers["X-Bz-Content-Sha1"] = sha1hex.str();
       connection->SetHeaders(headers);
 
@@ -261,33 +260,43 @@ void BB::uploadFile(const string& bucket, const string& name, const string& type
       char* buf = new char[length];
       fin.read(buf, length); 
       if (fin.fail()) { 
-         cerr << "error: could only read " << fin.gcount() << " bytes of " << name << endl;
+         throw std::runtime_error("could not read all of " + localFilePath);
       }
       fin.close();
 
       RestClient::Response response = connection->post("", string(buf, length));
       delete[] buf;
       if (response.code != 200) { 
-         parseErrorThrow(khi::Json::load(response.body));
+         throwResponseError(Json::load(response.body));
       }
    }
 }
 
 void BB::downloadFileById(const string& id, ofstream& fout) { 
    auto_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + API_URL_PATH);
+
+   RestClient::HeaderFields headers; 
+   headers["Authorization"] = m_session.authorizationToken;
+   connection->SetHeaders(headers);
+
    RestClient::Response response = connection->get("/b2_download_file_by_id?fileId=" + id);
    if (response.code != 200) { 
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
    fout << response.body;
    fout.close();
 }
 
-void BB::downloadFileByName(const string& bucket, const string& name, ofstream& fout) {
+void BB::downloadFileByName(const string& bucketName, const string& remoteFileName, ofstream& fout) {
    auto_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + "/file");
-   RestClient::Response response = connection->get("/" + bucket + "/" + name);
+
+   RestClient::HeaderFields headers; 
+   headers["Authorization"] = m_session.authorizationToken;
+   connection->SetHeaders(headers);
+
+   RestClient::Response response = connection->get("/" + bucketName+ "/" + remoteFileName);
    if (response.code != 200) {
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
    fout << response.body;
    fout.close();
@@ -302,7 +311,7 @@ void BB::createBucket(const string& bucketName) {
 
    RestClient::Response response = connection->get("/b2_create_bucket?accountId=" + m_accountId + "&bucketName=" + bucketName + "&bucketType=allPrivate");
    if (response.code != 200) { 
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
 }
 
@@ -315,7 +324,7 @@ void BB::deleteBucket(const string& bucketId) {
 
    RestClient::Response response = connection->get("/b2_delete_bucket?accountId=" + m_accountId + "&bucketId=" + bucketId);
    if (response.code != 200) { 
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
 }
 
@@ -327,14 +336,14 @@ void BB::updateBucket(const string& bucketId, const string& bucketType) {
    headers["Content-Type"] = "application/json";
    connection->SetHeaders(headers);
 
-   khi::Json json = khi::Json::object();
-   json.set("accountId", khi::Json::string(m_accountId));
-   json.set("bucketId", khi::Json::string(bucketId));
-   json.set("bucketType", khi::Json::string(bucketType));
+   Json json = Json::object();
+   json.set("accountId", Json::string(m_accountId));
+   json.set("bucketId", Json::string(bucketId));
+   json.set("bucketType", Json::string(bucketType));
 
    RestClient::Response response = connection->post("/b2_update_bucket", json.dump());
    if (response.code != 200) { 
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
 }
 
@@ -346,35 +355,33 @@ std::list<BB_Object> BB::listFileVersions(const string& bucketId, const string& 
    headers["Content-Type"] = "application/json";
    connection->SetHeaders(headers);
 
-   khi::Json json = khi::Json::object();
-   json.set("bucketId", khi::Json::string(bucketId));
+   Json json = Json::object();
+   json.set("bucketId", Json::string(bucketId));
    if (!startFileName.empty()) {
-      json.set("startFileName", khi::Json::string(startFileName));
+      json.set("startFileName", Json::string(startFileName));
       if (!startFileId.empty()) {
-         json.set("startFileId", khi::Json::string(startFileId));
+         json.set("startFileId", Json::string(startFileId));
       }
    }
-   json.set("maxFileCount", khi::Json::integer(maxFileCount));
+   json.set("maxFileCount", Json::integer(maxFileCount));
 
    RestClient::Response response = connection->post("/b2_list_file_versions", json.dump());
    if (response.code != 200) {
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
-   std::list<BB_Object> files;
-   parseObjectsList(files, response.body);
-   return files;
+   return unpackObjectsList(response.body);
 }
 
 void BB::deleteFileVersion(const string& fileName, const string& fileId) {
    auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
    
-   khi::Json json = khi::Json::object();
+   Json json = Json::object();
    json.set("fileName", Json::string(fileName));
    json.set("fileId", Json::string(fileId));
    
    RestClient::Response response = connection->post("/b2_delete_file_version", json.dump());
    if (response.code != 200) {
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
 }
 
@@ -383,16 +390,16 @@ const BB_Object BB::getFileInfo(const string& fileId) {
 
    auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
    
-   khi::Json json = khi::Json::object();
+   Json json = Json::object();
    json.set("fileId", Json::string(fileId));
 
    RestClient::Response response = connection->post("/b2_get_file_info", json.dump());
    if (response.code != 200) {
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
-   khi::Json obj = khi::Json::load(response.body);
+   Json obj = Json::load(response.body);
    if (obj.isObject()) {
-      object = parseObject(obj);
+      object = unpackObject(obj);
    }
    return object;
 }
@@ -400,32 +407,44 @@ const BB_Object BB::getFileInfo(const string& fileId) {
 void BB::hideFile(const string& bucketId, const string& fileName) {
    auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
-   khi::Json json = khi::Json::object();
-   json.set("bucketId", khi::Json::string(bucketId));
-   json.set("fileName", khi::Json::string(fileName));
+   Json json = Json::object();
+   json.set("bucketId", Json::string(bucketId));
+   json.set("fileName", Json::string(fileName));
 
    RestClient::Response response = connection->post("/b2_hide_file", json.dump());
    if (response.code != 200) {
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
 }
 
-std::string BB::listBuckets(RestClient::Connection* connection) {
+list<BB_Bucket> BB::listBuckets() {
+   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = m_session.authorizationToken;
+   connection->SetHeaders(headers);
+
    RestClient::Response response = connection->get("/b2_list_buckets?accountId=" + m_accountId);
    if (response.code != 200) {
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
-   return response.body;
+   return unpackBucketsList(response.body);
 }
 
-std::string BB::listBucket(RestClient::Connection* connection, const string& bucketId) {
-   khi::Json json = khi::Json::object();
-   json.set("bucketId", khi::Json::string(bucketId));
+list<BB_Object> BB::listBucket(const string& bucketName, const string& folderName) {
+   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = m_session.authorizationToken;
+   connection->SetHeaders(headers);
+
+   Json json = Json::object();
+   json.set("bucketId", Json::string(getBucket(bucketName).id));
    RestClient::Response response = connection->post("/b2_list_file_names", json.dump());
    if (response.code != 200) { 
-      parseErrorThrow(khi::Json::load(response.body));
+      throwResponseError(Json::load(response.body));
    }
-   return response.body;
+   return unpackObjectsList(response.body);
 }
 
 } // namespace khi
