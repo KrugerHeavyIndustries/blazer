@@ -5,9 +5,9 @@ B2 cloud storage service.
 
 It is currently an early work but is usable. 
 
-Installation 
+## Installation 
 
-## Ubuntu PPA 
+### Ubuntu PPA 
 
     sudo add-apt-repository ppa:chris.kruger+ubuntu/blazer
     sudo apt-get update 
@@ -26,7 +26,7 @@ use it. These details live in the blazer configuration file.
     echo "accountId <YOUR_B2_ACCOUNT_ID>" > ~/.blazer/config
     echo "applicationKey <YOUR_B2_APP_KEY>" >> ~/blazer/config
 
-# Basic Usage
+## Basic Usage
 
     blazer (help)
     blazer create_bucket <bucketName>
