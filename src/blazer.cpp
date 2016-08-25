@@ -187,6 +187,10 @@ void loadBlazerFile(const string& path, string& accountId, string& applicationKe
 }
 
 void printUsage(const Dispatcher& dispatcher) {
+   cout << "Blazer 0.1.3 (Backblaze B2 from the command line)" << endl;
+   cout << "Copyright (c) 2016 Kruger Heavy Industries" << endl;
+   cout << "http://www.krugerheavyindustries.com" << endl;
+   cout << endl;
    cout << "Usage:" << endl;
    dispatcher.printUsages();
 }
