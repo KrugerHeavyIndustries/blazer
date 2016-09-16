@@ -38,6 +38,7 @@
 
 #include "multidict.h"
 #include "session.h"
+#include "dispatcho.h"
 
 namespace RestClient { 
    class Connection;
@@ -69,7 +70,51 @@ struct BB_Bucket {
       : id(_id), name(_name), type(_type) {} 
 };
 
+struct BB_Range {
+   long start;
+   long end;
+
+   inline BB_Range(long s, long e) : start(s), end(e) {}
+   inline BB_Range(const BB_Range& other) : start(other.start), end(other.end) {}
+
+   int length() const { return static_cast<int>(end - start) + 1; }
+};
+
+class BB;
+
+class UploadPartTask : public Task {
+
+public:
+
+   UploadPartTask(const BB& bb, const std::string& fileId, const BB_Range& range, int index, const std::string& filepath);
+   UploadPartTask(const UploadPartTask&);
+
+   virtual ~UploadPartTask();
+
+   virtual int run();
+
+   inline std::string hash() const {
+      return m_hash;
+   }
+
+   static std::vector<std::string> map(const std::vector<UploadPartTask*>& uploads);
+   static std::string result(const UploadPartTask* task);
+
+   private:
+
+   UploadPartTask& operator=(const UploadPartTask&); // prevent assign
+
+   const BB& m_bb;
+   const std::string& m_fileId;
+   const BB_Range& m_range;
+   const int m_index;
+   const std::string& m_filepath;
+   std::string m_hash;
+};
+
 class BB {
+
+   friend class UploadPartTask;
 
    std::string m_accountId;
    std::string m_applicationKey;
@@ -79,6 +124,8 @@ class BB {
    std::list<BB_Bucket> m_buckets;
 
    static const std::string API_URL_PATH;
+   static const int MINIMUM_PART_SIZE_BYTES;
+   static const int MAX_FILE_PARTS;
     
    static std::list<BB_Bucket> unpackBucketsList(const std::string& json);
 
@@ -88,13 +135,6 @@ class BB {
 
    static void throwResponseError(const Json& json);
    
-   struct UploadUrlInfo {
-      std::string bucketId;
-      std::string uploadUrl;
-      std::string authorizationToken;
-   };
-
-   bool getUploadUrl(UploadUrlInfo& info);
     
    public:
 
@@ -130,10 +170,31 @@ class BB {
    const BB_Object getFileInfo(const std::string& fileId);
 
    void hideFile(const std::string& bucketName, const std::string& fileName);
+   struct UploadUrlInfo {
+      std::string bucketOrFileId;
+      std::string uploadUrl;
+      std::string authorizationToken;
+   };
+
+   const UploadUrlInfo getUploadUrl(const std::string& bucketId) const;
+
+   const UploadUrlInfo getUploadPartUrl(const std::string& fileId) const;
 
    private:
 
-   std::auto_ptr<RestClient::Connection> connect(const std::string& baseUrl);
+   void uploadSmall(const std::string& bucketId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, long totalBytes);
+
+   void uploadLarge(const std::string& buckedId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, long totalBytes);
+
+   std::string startLargeFile(const std::string& bucketId, const std::string& fileName, const std::string& contentType);
+
+   std::string uploadPart(const std::string& uploadUrl, const std::string& authorizationToken, int partNumber, const BB_Range& range, std::ifstream& fs) const;
+
+   void finishLargeFile(const std::string& fileId, const std::vector<std::string>& partsSha1);
+
+   std::vector<BB_Range> choosePartRanges(long totalBytes, long minimumPartBytes);
+
+   std::auto_ptr<RestClient::Connection> connect(const std::string& baseUrl) const;
  
    std::list<BB_Bucket> listBuckets();
 };

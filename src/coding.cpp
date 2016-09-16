@@ -88,17 +88,30 @@ std::string computeMD5(std::istream& istrm)
     return md5strm.str();
 }
 
-size_t computeSha1(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& fin) { 
+size_t computeSha1(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& stream) {
+   stream.clear();
+   stream.seekg(0, ios::end);
+   long end = stream.tellg();
+   stream.seekg(0, ios::beg);
+   return computeSha1UsingRange(sha1, stream, 0, end);
+}
+
+size_t computeSha1UsingRange(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& stream, long firstByte, long lastByte) {
    EVP_MD_CTX ctx;
    unsigned int length;
 
    EVP_DigestInit(&ctx, EVP_sha1());
 
-   uint8_t* buf = (uint8_t*)alloca(kMD5_ChunkSize); 
-   while (fin) {
-     fin.read((char*)buf, kMD5_ChunkSize);
-     streamsize count = fin.gcount();
-     EVP_DigestUpdate(&ctx, buf, count);
+   stream.seekg(firstByte, ios::beg);
+
+   long remainBytes = (lastByte - firstByte) + 1;
+
+   uint8_t* buf = (uint8_t*)alloca(kMD5_ChunkSize);
+   while (stream && remainBytes > 0) {
+      stream.read((char*)buf, std::min(kMD5_ChunkSize, remainBytes));
+      streamsize count = stream.gcount();
+      EVP_DigestUpdate(&ctx, buf, count);
+      remainBytes -= count;
    }
 
    EVP_DigestFinal_ex(&ctx, sha1, &length);

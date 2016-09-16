@@ -24,83 +24,72 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef JSON_H
-#define JSON_H
+#ifndef DISPATCHO_H
+#define DISPATCHO_H
 
+#include <deque>
 #include <string>
-#include <stdint.h>
-
-struct json_t; 
+#include <pthread.h>
 
 namespace khi {
 
-class Json { 
-   public: 
-
-      Json(const Json& json);
-
-      ~Json();
-
-      Json& operator=(const Json& json);
+class Task { 
    
-      bool isObject() const;
+public: 
 
-      bool isArray() const; 
+   Task(void* arg = NULL, const std::string name = "")
+      : m_arg(arg),
+        m_name(name) {
+   }
 
-      bool isString() const;
+   virtual ~Task() {
+   }
 
-      bool isInteger() const;
+   void setArg(void* arg) { 
+      m_arg = arg; 
+   }
 
-      bool isReal() const;
+   virtual int run() = 0;
 
-      bool isBoolean() const;
+protected: 
+   
+   void* m_arg; 
+   std::string m_name;
 
-      std::string dump();
-
-      template<typename ValueType>
-      ValueType get() const
-      { 
-         return internalGet(static_cast<ValueType*>(NULL));
-      }
-      
-      Json get(const std::string& key) const;
-
-      Json at(int index) const;
-
-      void set(const std::string& key, const Json& json);
-
-      void append(const Json& value);
-
-      int size() const;
-
-      static Json load(const std::string&);
-
-      static Json object();
-
-      static Json string(const std::string& value);
-
-      static Json integer(int i);
-
-      static Json array();
-
-   private: 
-
-      Json(); 
-
-      Json(json_t* json); 
-
-      bool internalGet(bool*) const; 
-
-      double internalGet(double*) const; 
-
-      int internalGet(int*) const; 
-
-      uint64_t internalGet(uint64_t*) const; 
-
-      std::string internalGet(std::string*) const;
-
-      json_t* m_json;
 };
 
-} // namespace khi
-#endif // JSON_H
+class Dispatcho {
+
+public:
+
+   Dispatcho(int numThreads = 10); 
+   ~Dispatcho(); 
+
+   int async(Task* task); 
+
+   void stop();
+
+   int size();
+
+private:
+
+   Dispatcho& operator=(const Dispatcho&); // prevent assign
+   Dispatcho(const Dispatcho&); // prevent copy
+
+   int createThreads();
+
+   Task* take();
+
+   static void* threadMain(void* threadData);
+
+   volatile bool m_running;
+   int m_numThreads; 
+   std::deque<Task*> m_queue;
+
+   pthread_t* m_threads;
+   pthread_mutex_t m_mutex;
+   pthread_cond_t  m_condition;
+};
+
+}
+#endif // DISPATCHO_H

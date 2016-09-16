@@ -106,10 +106,18 @@ Json Json::at(int index) const {
 }
 
 void Json::set(const std::string& key, const Json& value) { 
-   if (isObject()) { 
+   if (isObject()) {
       json_object_set(m_json, key.c_str(), value.m_json);
-   } else { 
+   } else {
       throw std::domain_error("cannot use set() with this json type");
+   }
+}
+
+void Json::append(const Json& value) {
+   if (isArray()) {
+      json_array_append(m_json, value.m_json);
+   } else {
+      throw std::domain_error("cannot use appendNew with this json type");
    }
 }
 

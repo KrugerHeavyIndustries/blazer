@@ -23,26 +23,36 @@
 // 2. Altered source versions must be plainly marked as such, and must not be
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
-   
-#ifndef CODING_H 
-#define CODING_H
 
-#include <iostream>
-#include <string>
-#include <stdint.h>
-#include <openssl/md5.h>
-#include <openssl/buffer.h>
-#include <openssl/hmac.h>
-#include <openssl/bio.h>
+#include "command_list_buckets.h"
 
-std::string encodeB64(uint8_t * data, size_t dataLen);
+#include "bb.h"
 
-size_t computeSha1(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& istrm);
-size_t computeSha1(std::istream& fin);
+namespace khi {
+namespace command {
 
-size_t computeSha1UsingRange(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& istrm, long firstByte, long lastByte);
+bool ListBuckets::valid(size_t wordc) {
+   return (wordc == 1);
+}
 
-size_t computeMD5(uint8_t md5[EVP_MAX_MD_SIZE], std::istream& istrm);
-std::string computeMD5(std::istream & istrm);
+int ListBuckets::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
+   listBuckets(cmds, bb);
+   return EXIT_SUCCESS;
+}
 
-#endif // CODING_H
+void ListBuckets::printUsage() { 
+    std::cout << "List all buckets:" << std::endl;
+    std::cout << "\tblazer list_buckets" << std::endl;
+    std::cout << std::endl;
+}
+
+void ListBuckets::listBuckets(CommandLine& cmds, BB& bb) { 
+   std::list<BB_Bucket>& buckets = bb.getBuckets(false, true);
+   std::list<BB_Bucket>::iterator bkt;
+
+   for (bkt = buckets.begin(); bkt != buckets.end(); ++bkt) {
+      std::cout << bkt->id << " " << bkt->type << " " << bkt->name << std::endl;
+   }
+}
+} // namespace command 
+} // namespace khi

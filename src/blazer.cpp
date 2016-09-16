@@ -41,6 +41,8 @@
 #include "command.h"
 #include "exceptions.h"
 
+#include "jsoncpp.h"
+
 #define PATH_BLAZER_DIR ".blazer"
 
 using namespace std;

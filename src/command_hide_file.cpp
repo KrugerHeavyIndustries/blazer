@@ -23,26 +23,35 @@
 // 2. Altered source versions must be plainly marked as such, and must not be
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
-   
-#ifndef CODING_H 
-#define CODING_H
 
-#include <iostream>
-#include <string>
-#include <stdint.h>
-#include <openssl/md5.h>
-#include <openssl/buffer.h>
-#include <openssl/hmac.h>
-#include <openssl/bio.h>
+#include "command_hide_file.h"
 
-std::string encodeB64(uint8_t * data, size_t dataLen);
+#include "bb.h"
 
-size_t computeSha1(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& istrm);
-size_t computeSha1(std::istream& fin);
+namespace khi {
+namespace command {
 
-size_t computeSha1UsingRange(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& istrm, long firstByte, long lastByte);
+using namespace std; 
 
-size_t computeMD5(uint8_t md5[EVP_MAX_MD_SIZE], std::istream& istrm);
-std::string computeMD5(std::istream & istrm);
+bool HideFile::valid(size_t wordc) {
+   return (wordc == 3);
+}
 
-#endif // CODING_H
+int HideFile::execute(size_t wordc, CommandLine& cmds, BB& bb) {
+   int idx = 1;
+   string bucketName;
+   string fileName;
+   parse2(idx, cmds, bucketName, fileName);
+   bb.hideFile(bb.getBucket(bucketName).id, fileName);
+   return EXIT_SUCCESS;
+}
+
+void HideFile::printUsage() {
+   cout << "Hide a file in a bucket by making it private" << endl;
+   cout << "\tblazer hide_file <bucketName> <fileName>" << endl;
+   cout << endl;
+}
+
+} // namespace command
+} // namespace khi
+

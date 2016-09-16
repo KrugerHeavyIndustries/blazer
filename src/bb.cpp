@@ -32,6 +32,7 @@
 #include <map>
 #include <sstream>
 #include <algorithm>
+#include <unistd.h>
 
 #include "restclient-cpp/connection.h"
 #include "restclient-cpp/restclient.h"
@@ -40,7 +41,7 @@
 #include "coding.h"
 #include "jsoncpp.h"
 #include "exceptions.h"
-   
+
 using namespace std;
 
 namespace {
@@ -57,6 +58,47 @@ namespace {
 namespace khi {
 
 const string BB::API_URL_PATH = "/b2api/v1";
+const int BB::MINIMUM_PART_SIZE_BYTES = 100 * 1000000; // 100 MB
+const int BB::MAX_FILE_PARTS = 10000;
+
+UploadPartTask::UploadPartTask(const BB& bb, const string& fileId, const BB_Range& range, int index, const string& filepath)
+   :  Task(NULL, "upload_part_task"),
+      m_bb(bb),
+      m_fileId(fileId),
+      m_range(range),
+      m_index(index),
+      m_filepath(filepath) { }
+
+UploadPartTask::UploadPartTask(const UploadPartTask& other)
+   :  Task(NULL, "upload_part_task"),
+      m_bb(other.m_bb),
+      m_fileId(other.m_fileId),
+      m_range(other.m_range),
+      m_index(other.m_index),
+      m_filepath(other.m_filepath) {}
+
+UploadPartTask::~UploadPartTask() {
+}
+
+int UploadPartTask::run() {
+   ifstream fin(m_filepath.c_str(), ios::binary);
+   if(!fin.is_open()) {
+      throw std::runtime_error("could not read file " + m_filepath);
+   }
+   BB::UploadUrlInfo uploadUrlInfo = m_bb.getUploadPartUrl(m_fileId);
+   m_hash = m_bb.uploadPart(uploadUrlInfo.uploadUrl, uploadUrlInfo.authorizationToken, m_index + 1, m_range, fin);
+   return 0;
+}
+
+vector<string> UploadPartTask::map(const vector<UploadPartTask*>& uploads) {
+   vector<string> hashes;
+   std::transform(uploads.begin(), uploads.end(), back_inserter(hashes), result);
+   return hashes;
+}
+
+string UploadPartTask::result(const UploadPartTask* task) {
+   return task->hash();
+}
 
 BB::BB(const string& accountId, const string& applicationKey) :
    m_accountId(accountId),
@@ -96,9 +138,8 @@ void BB::authorize() {
    }
 }
 
-auto_ptr<RestClient::Connection> BB::connect(const string& baseUrl) {
+auto_ptr<RestClient::Connection> BB::connect(const string& baseUrl) const {
    RestClient::Connection* connection = new RestClient::Connection(baseUrl);
-   connection->SetTimeout(20);
    connection->SetUserAgent("cmd/blazer");
    return auto_ptr<RestClient::Connection>(connection);
 }
@@ -205,70 +246,63 @@ void BB::refreshBuckets(bool getContents) {
    }
 }
 
-bool BB::getUploadUrl(UploadUrlInfo& info) { 
+const BB::UploadUrlInfo BB::getUploadUrl(const string& bucketId) const {
    auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = m_session.authorizationToken;
+   connection->SetHeaders(headers);
+
    Json payload = Json::object();
-   payload.set("bucketId", Json::string(info.bucketId));
+   payload.set("bucketId", Json::string(bucketId));
    RestClient::Response response = connection->post("/b2_get_upload_url", payload.dump());
    if (response.code != 200) {
-      throwResponseError(Json::load(response.body)); 
+      throwResponseError(Json::load(response.body));
    }
    Json json = Json::load(response.body);
-   info.bucketId = json.get("bucketId").get<string>();
+
+   UploadUrlInfo info;
+   info.bucketOrFileId = json.get("bucketId").get<string>();
    info.uploadUrl = json.get("uploadUrl").get<string>();
    info.authorizationToken = json.get("authorizationToken").get<string>();
-   return true;
+   return info;
 }
 
-void BB::uploadFile(const string& bucketName, const string& localFilePath, const string& remoteFileName, const string& contentType) { 
+const BB::UploadUrlInfo BB::getUploadPartUrl(const string& fileId) const {
+   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = m_session.authorizationToken;
+   connection->SetHeaders(headers);
+
+   Json payload = Json::object();
+   payload.set("fileId", Json::string(fileId));
+   RestClient::Response response = connection->post("/b2_get_upload_part_url", payload.dump());
+   if (response.code != 200) {
+      throwResponseError(Json::load(response.body));
+   }
+   Json json = Json::load(response.body);
+
+   UploadUrlInfo info;
+   info.bucketOrFileId = json.get("fileId").get<string>();
+   info.uploadUrl = json.get("uploadUrl").get<string>();
+   info.authorizationToken = json.get("authorizationToken").get<string>();
+   return info;
+}
+
+void BB::uploadFile(const string& bucketName, const string& localFilePath, const string& remoteFileName, const string& contentType) {
 
    BB_Bucket bucket = getBucket(bucketName);
 
-   UploadUrlInfo uploadUrlInfo;
-   uploadUrlInfo.bucketId = bucket.id;
-   if (getUploadUrl(uploadUrlInfo)) { 
-      ifstream fin(localFilePath.c_str(), ios::binary);
-      if(!fin.is_open()) {
-         throw std::runtime_error("could not read file " + localFilePath);
-      }
+   long minimumSplitSizeBytes = MINIMUM_PART_SIZE_BYTES * 2;
 
-      uint8_t sha1[EVP_MAX_MD_SIZE];
-      size_t length = computeSha1(sha1, fin);
+   ifstream fsz(localFilePath.c_str(), ios::binary | ios::ate);
+   long totalBytes = fsz.tellg();
 
-      ostringstream sha1hex;
-      sha1hex.fill('0');
-      sha1hex << std::hex;
-
-      for (uint8_t* ptr = sha1; ptr < sha1 + length; ptr++) {
-         sha1hex << std::setw(2) << (unsigned int)(*ptr);
-      }
-
-      auto_ptr<RestClient::Connection> connection = connect(uploadUrlInfo.uploadUrl);
-
-      RestClient::HeaderFields headers; 
-      headers["Authorization"] = uploadUrlInfo.authorizationToken;
-      headers["Content-Type"] = contentType;
-      headers["X-Bz-File-Name"] = remoteFileName;
-      headers["X-Bz-Content-Sha1"] = sha1hex.str();
-      connection->SetHeaders(headers);
-
-      fin.clear();
-      fin.seekg(0, ios_base::end);
-      length = fin.tellg();
-      fin.seekg(0, ios_base::beg);
-
-      char* buf = new char[length];
-      fin.read(buf, length); 
-      if (fin.fail()) { 
-         throw std::runtime_error("could not read all of " + localFilePath);
-      }
-      fin.close();
-
-      RestClient::Response response = connection->post("", string(buf, length));
-      delete[] buf;
-      if (response.code != 200) { 
-         throwResponseError(Json::load(response.body));
-      }
+   if (totalBytes < minimumSplitSizeBytes) {
+      uploadSmall(bucket.id, localFilePath, remoteFileName, contentType, totalBytes);
+   } else {
+      uploadLarge(bucket.id, localFilePath, remoteFileName, contentType, totalBytes);
    }
 }
 
@@ -415,6 +449,184 @@ void BB::hideFile(const string& bucketId, const string& fileName) {
    if (response.code != 200) {
       throwResponseError(Json::load(response.body));
    }
+}
+
+void BB::uploadSmall(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, long totalBytes) {
+   ifstream fin(localFilePath.c_str(), ios::binary);
+   if(!fin.is_open()) {
+      throw std::runtime_error("could not read file " + localFilePath);
+   }
+
+   const UploadUrlInfo uploadUrlInfo = getUploadUrl(bucketId);
+
+   uint8_t sha1[EVP_MAX_MD_SIZE];
+   size_t length = computeSha1(sha1, fin);
+
+   ostringstream sha1hex;
+   sha1hex.fill('0');
+   sha1hex << std::hex;
+
+   for (uint8_t* ptr = sha1; ptr < sha1 + length; ptr++) {
+      sha1hex << std::setw(2) << (unsigned int)(*ptr);
+   }
+
+   auto_ptr<RestClient::Connection> connection = connect(uploadUrlInfo.uploadUrl);
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = uploadUrlInfo.authorizationToken;
+   headers["Content-Type"] = contentType;
+   headers["X-Bz-File-Name"] = remoteFileName;
+   headers["X-Bz-Content-Sha1"] = sha1hex.str();
+   connection->SetHeaders(headers);
+
+   fin.clear();
+   fin.seekg(0, ios_base::beg);
+
+   char* buf = new char[totalBytes];
+   fin.read(buf, totalBytes);
+   if (fin.fail()) {
+      throw std::runtime_error("could not read all of " + localFilePath);
+   }
+   fin.close();
+
+   RestClient::Response response = connection->post("", string(buf, totalBytes));
+   delete[] buf;
+   if (response.code != 200) {
+      throwResponseError(Json::load(response.body));
+   }
+}
+
+void BB::uploadLarge(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, long totalBytes) {
+   ifstream fin(localFilePath.c_str(), ios::binary);
+   if(!fin.is_open()) {
+      throw std::runtime_error("could not read file " + localFilePath);
+   }
+
+   string fileId = startLargeFile(bucketId, remoteFileName, contentType);
+   vector<BB_Range> ranges = choosePartRanges(totalBytes, MINIMUM_PART_SIZE_BYTES);
+
+   Dispatcho dispatcho;
+
+   int index = 0;
+   vector<UploadPartTask*> uploads;
+   for (vector<BB_Range>::const_iterator iter = ranges.begin(); iter != ranges.end(); ++iter) {
+      uploads.push_back(new UploadPartTask(*this, fileId, *iter, index++, localFilePath));
+      dispatcho.async(uploads.back());
+   }
+
+   while (dispatcho.size() > 0) {
+      sleep(0);
+   }
+
+   dispatcho.stop();
+
+   finishLargeFile(fileId, UploadPartTask::map(uploads));
+
+   for (vector<UploadPartTask*>::iterator iter = uploads.begin(); iter != uploads.end(); ++iter) {
+      delete (*iter);
+   }
+}
+
+string BB::startLargeFile(const string& bucketId, const string& fileName, const string& contentType) {
+   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = m_session.authorizationToken;
+   headers["Content-Type"] = "application/json";
+   connection->SetHeaders(headers);
+
+   Json json = Json::object();
+   json.set("bucketId", Json::string(bucketId));
+   json.set("fileName", Json::string(fileName));
+   json.set("contentType", Json::string(contentType));
+
+   RestClient::Response response = connection->post("/b2_start_large_file", json.dump());
+   if (response.code != 200) {
+      throwResponseError(Json::load(response.body));
+   }
+   return Json::load(response.body).get("fileId").get<string>();
+}
+
+string BB::uploadPart(const string& uploadUrl, const string& authorizationToken, int partNumber, const BB_Range& range, ifstream& fs) const {
+   auto_ptr<RestClient::Connection> connection = connect(uploadUrl);
+
+   uint8_t sha1[EVP_MAX_MD_SIZE];
+   size_t length = computeSha1UsingRange(sha1, fs, range.start, range.end);
+
+   ostringstream sha1hex;
+   sha1hex.fill('0');
+   sha1hex << std::hex;
+
+   for (uint8_t* ptr = sha1; ptr < sha1 + length; ptr++) {
+      sha1hex << std::setw(2) << (unsigned int)(*ptr);
+   }
+
+   ostringstream convertPartNumber;
+   convertPartNumber << partNumber;
+
+   ostringstream convertLength;
+   convertLength << range.length();
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = authorizationToken;
+   //headers["Content-Type"] = "application/json; charset=utf-8";
+   headers["X-Bz-Part-Number"] = convertPartNumber.str();
+   headers["X-Bz-Content-Sha1"] = sha1hex.str();
+   headers["Content-Length"] = convertLength.str();
+
+   connection->SetHeaders(headers);
+
+   fs.clear();
+   fs.seekg(range.start, ios_base::beg);
+
+   char* buf = new char[range.length()];
+   fs.read(buf, range.length());
+   if (fs.fail()) {
+      throw std::runtime_error("could not read file segment");
+   }
+   fs.close();
+
+   RestClient::Response response = connection->post("", string(buf, range.length()));
+   if (response.code != 200) {
+      throwResponseError(Json::load(response.body));
+   }
+   delete[] buf;
+
+   return sha1hex.str();
+}
+
+void BB::finishLargeFile(const string& fileId, const vector<string>& hashes) {
+   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = m_session.authorizationToken;
+   headers["Content-Type"] = "application/json";
+   connection->SetHeaders(headers);
+
+   Json json = Json::object();
+   json.set("fileId", Json::string(fileId));
+
+   Json array = Json::array();
+   for (vector<string>::const_iterator iter = hashes.begin(); iter != hashes.end(); ++iter) {
+      array.append(Json::string(*iter));
+   }
+   json.set("partSha1Array", array);
+
+   RestClient::Response response = connection->post("/b2_finish_large_file", json.dump());
+   if (response.code != 200) {
+      throwResponseError(Json::load(response.body));
+   }
+}
+
+vector<BB_Range> BB::choosePartRanges(long totalBytes, long minimumPartBytes) {
+   vector<BB_Range> ranges;
+   long n = std::min(totalBytes / minimumPartBytes, static_cast<long>(MAX_FILE_PARTS));
+   long minus1 = n - 1;
+   long partBytes = totalBytes / n;
+   for (long i = 0; i < n; ++i) {
+      ranges.push_back(BB_Range(i * partBytes, (i < minus1 ? (i + 1) * partBytes : totalBytes) - 1));
+   }
+   return ranges;
 }
 
 list<BB_Bucket> BB::listBuckets() {

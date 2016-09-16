@@ -23,26 +23,27 @@
 // 2. Altered source versions must be plainly marked as such, and must not be
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
-   
-#ifndef CODING_H 
-#define CODING_H
 
-#include <iostream>
-#include <string>
-#include <stdint.h>
-#include <openssl/md5.h>
-#include <openssl/buffer.h>
-#include <openssl/hmac.h>
-#include <openssl/bio.h>
+#ifndef COMMAND_HIDE_FILE_H
+#define COMMAND_HIDE_FILE_H 
 
-std::string encodeB64(uint8_t * data, size_t dataLen);
+#include "command.h"
 
-size_t computeSha1(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& istrm);
-size_t computeSha1(std::istream& fin);
+namespace khi {
+namespace command {
 
-size_t computeSha1UsingRange(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& istrm, long firstByte, long lastByte);
+struct HideFile : Base {
 
-size_t computeMD5(uint8_t md5[EVP_MAX_MD_SIZE], std::istream& istrm);
-std::string computeMD5(std::istream & istrm);
+   bool valid(size_t wordc);
 
-#endif // CODING_H
+   int execute(size_t wordc, CommandLine& cmds, BB& bb);
+
+   void printUsage();
+};
+
+} // namespace command
+} // namespace khi
+
+#endif // COMMAND_HIDE_FILE_H 
+
+
