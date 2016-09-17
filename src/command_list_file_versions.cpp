@@ -27,6 +27,7 @@
 #include "command_list_file_versions.h" 
 
 #include <ostream>
+#include <errno.h>
 
 #include "bb.h"
 #include "commandline.h"
