@@ -27,6 +27,7 @@
 #include <cmath>
 #include <exception>
 #include <stdexcept>
+#include <memory>
 
 #include <unistd.h>
 #include <pwd.h>
