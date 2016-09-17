@@ -40,7 +40,7 @@ std::string encodeB64(uint8_t * data, size_t dataLen);
 size_t computeSha1(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& istrm);
 size_t computeSha1(std::istream& fin);
 
-size_t computeSha1UsingRange(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& istrm, long firstByte, long lastByte);
+size_t computeSha1UsingRange(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& istrm, uint64_t firstByte, uint64_t lastByte);
 
 size_t computeMD5(uint8_t md5[EVP_MAX_MD_SIZE], std::istream& istrm);
 std::string computeMD5(std::istream & istrm);

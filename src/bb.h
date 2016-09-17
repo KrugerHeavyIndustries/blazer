@@ -72,10 +72,10 @@ struct BB_Bucket {
 };
 
 struct BB_Range {
-   long start;
-   long end;
+   uint64_t start;
+   uint64_t end;
 
-   inline BB_Range(long s, long e) : start(s), end(e) {}
+   inline BB_Range(uint64_t s, uint64_t e) : start(s), end(e) {}
    inline BB_Range(const BB_Range& other) : start(other.start), end(other.end) {}
 
    int length() const { return static_cast<int>(end - start) + 1; }
@@ -183,9 +183,9 @@ class BB {
 
    private:
 
-   void uploadSmall(const std::string& bucketId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, long totalBytes);
+   void uploadSmall(const std::string& bucketId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, uint64_t totalBytes);
 
-   void uploadLarge(const std::string& buckedId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, long totalBytes);
+   void uploadLarge(const std::string& buckedId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, uint64_t totalBytes);
 
    std::string startLargeFile(const std::string& bucketId, const std::string& fileName, const std::string& contentType);
 
@@ -193,7 +193,7 @@ class BB {
 
    void finishLargeFile(const std::string& fileId, const std::vector<std::string>& partsSha1);
 
-   std::vector<BB_Range> choosePartRanges(long totalBytes, long minimumPartBytes);
+   std::vector<BB_Range> choosePartRanges(uint64_t totalBytes, uint64_t minimumPartBytes);
 
    std::auto_ptr<RestClient::Connection> connect(const std::string& baseUrl) const;
  

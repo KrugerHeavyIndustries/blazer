@@ -294,10 +294,10 @@ void BB::uploadFile(const string& bucketName, const string& localFilePath, const
 
    BB_Bucket bucket = getBucket(bucketName);
 
-   long minimumSplitSizeBytes = MINIMUM_PART_SIZE_BYTES * 2;
+   uint64_t minimumSplitSizeBytes = MINIMUM_PART_SIZE_BYTES * 2;
 
    ifstream fsz(localFilePath.c_str(), ios::binary | ios::ate);
-   long totalBytes = fsz.tellg();
+   uint64_t totalBytes = fsz.tellg();
 
    if (totalBytes < minimumSplitSizeBytes) {
       uploadSmall(bucket.id, localFilePath, remoteFileName, contentType, totalBytes);
@@ -451,7 +451,7 @@ void BB::hideFile(const string& bucketId, const string& fileName) {
    }
 }
 
-void BB::uploadSmall(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, long totalBytes) {
+void BB::uploadSmall(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, uint64_t totalBytes) {
    ifstream fin(localFilePath.c_str(), ios::binary);
    if(!fin.is_open()) {
       throw std::runtime_error("could not read file " + localFilePath);
@@ -496,7 +496,7 @@ void BB::uploadSmall(const string& bucketId, const string& localFilePath, const 
    }
 }
 
-void BB::uploadLarge(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, long totalBytes) {
+void BB::uploadLarge(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, uint64_t  totalBytes) {
    ifstream fin(localFilePath.c_str(), ios::binary);
    if(!fin.is_open()) {
       throw std::runtime_error("could not read file " + localFilePath);
@@ -618,12 +618,12 @@ void BB::finishLargeFile(const string& fileId, const vector<string>& hashes) {
    }
 }
 
-vector<BB_Range> BB::choosePartRanges(long totalBytes, long minimumPartBytes) {
+vector<BB_Range> BB::choosePartRanges(uint64_t totalBytes, uint64_t minimumPartBytes) {
    vector<BB_Range> ranges;
-   long n = std::min(totalBytes / minimumPartBytes, static_cast<long>(MAX_FILE_PARTS));
-   long minus1 = n - 1;
-   long partBytes = totalBytes / n;
-   for (long i = 0; i < n; ++i) {
+   uint64_t n = std::min(totalBytes / minimumPartBytes, static_cast<uint64_t>(MAX_FILE_PARTS));
+   uint64_t minus1 = n - 1;
+   uint64_t partBytes = totalBytes / n;
+   for (int i = 0; i < n; ++i) {
       ranges.push_back(BB_Range(i * partBytes, (i < minus1 ? (i + 1) * partBytes : totalBytes) - 1));
    }
    return ranges;
