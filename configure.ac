@@ -7,6 +7,7 @@ AC_CHECK_LIB([crypto], [main])
 AC_CHECK_LIB([ssl], [main])
 AC_CHECK_LIB([restclient-cpp], [main])
 AC_CHECK_LIB([jansson], [main])
+AC_CHECK_LIB([pthread], [main])
 AC_CONFIG_FILES([
   Makefile
   src/Makefile
