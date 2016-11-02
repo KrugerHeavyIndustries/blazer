@@ -54,7 +54,7 @@ class ResponseError : Exception {
    }; 
 
    std::string makeWhat() const {
-      static char tmp[4];
+      char tmp[4] = {'\0'};
       snprintf(tmp, sizeof(tmp), "%d", status);
       return std::string(tmp) + " " + code + " - " + message;
    }
