@@ -34,7 +34,7 @@ namespace khi {
 
 class Exception : public std::exception {
 
-	public:
+   public:
    
    explicit Exception() {}; 
 
@@ -44,24 +44,28 @@ class Exception : public std::exception {
 class ResponseError : Exception {
    public:
 
-   explicit ResponseError(int fs, const std::string& fc, const std::string& fm) :
-      status(fs), code(fc), message(fm) {};
+   explicit ResponseError(int fs, const std::string& fc, const std::string& fm)
+:
+      m_status(fs), m_code(fc), m_message(fm) {
+      build();
+   };
 
    ~ResponseError() throw() {};
 
    virtual const char* what() const throw() {
-      return makeWhat().c_str();
+      return m_what.c_str();
    }; 
 
-   std::string makeWhat() const {
-      static char tmp[4];
-      snprintf(tmp, sizeof(tmp), "%d", status);
-      return std::string(tmp) + " " + code + " - " + message;
+   void build() {
+      char tmp[4];
+      snprintf(tmp, sizeof(tmp), "%d", m_status);
+      m_what = std::string(tmp) + " " + m_code + " - " + m_message;
    }
 
-   int status;
-   std::string code;
-   std::string message;
+   int m_status;
+   std::string m_code;
+   std::string m_message;
+   std::string m_what;
 };
 
 
