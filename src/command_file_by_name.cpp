@@ -54,7 +54,7 @@ int FileByName::execute(size_t wordc, CommandLine& cmds, BB& bb) {
 
 void FileByName::printUsage() { 
    cout << "Download file from backblaze:" << endl;
-   cout << "\tblazer download_by_file_name <bucketName> <remoteFileName> <localFilePath>" << endl;
+   cout << "\tblazer download_file_by_name <bucketName> <remoteFileName> <localFilePath>" << endl;
    cout << endl;
 }
 

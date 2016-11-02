@@ -81,7 +81,9 @@ void MimeTypes::initialize() {
     ms_mimeTypes[".pdf"] = "application/pdf";
     
     ms_mimeTypes[".tar"] = "application/x-tar";
-    ms_mimeTypes[".gz"] = "application/octet-stream";
+    ms_mimeTypes[".bz"] = "application/x-bzip";
+    ms_mimeTypes[".bz2"] = "application/x-bzip2";
+    ms_mimeTypes[".gz"] = "application/x-gzip";
     ms_mimeTypes[".zip"] = "application/zip";
     
     ms_mimeTypes[".js"] = "application/js";
@@ -94,12 +96,12 @@ string MimeTypes::matchByExtension(const string& filename) {
       transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
       if (ms_mimeTypes.find(extension) != ms_mimeTypes.end())
          return ms_mimeTypes[extension];
-    }
+   }
     
-    if (ms_mimeTypes.find(filename) != ms_mimeTypes.end())
-        return ms_mimeTypes[filename];
+   if (ms_mimeTypes.find(filename) != ms_mimeTypes.end())
+       return ms_mimeTypes[filename];
     
-    return string("");
+   return string("application/octet-stream"); // default to
 } 
 
 } // namespace khi
