@@ -52,6 +52,8 @@ using namespace khi::command;
 
 void loadBlazerFile(const string& path, string& accountId, string& applicatioKey, string& name, int verbosity = 0);
 
+void printVersion();
+
 void printUsage(const Dispatcher& commands);
 
 int main(int argc, char * argv[]) {
@@ -76,7 +78,8 @@ int main(int argc, char * argv[]) {
    MimeTypes::initialize();
     
    CommandLine cmds;
-   cmds.flags.insert("-v"); // verbosity level
+   cmds.flags.insert("-v"); // version
+   cmds.flags.insert("-d"); // verbosity level
    cmds.flags.insert("-c"); // credentials file
    cmds.flags.insert("-t"); // type (Content-Type)
    cmds.flags.insert("-m"); // metadata
@@ -94,7 +97,12 @@ int main(int argc, char * argv[]) {
    string home(pw->pw_dir);
 
    if (cmds.hasFlag("-v")) {
-       verbosity = cmds.opts.getWithDefault("-v", 2);
+      printVersion();
+      return EXIT_SUCCESS;
+   }
+
+   if (cmds.hasFlag("-d")) {
+       verbosity = cmds.opts.getWithDefault("-d", 2);
        if(verbosity > 0)
            cout << "Verbose output level " << verbosity << endl;
    }
@@ -190,10 +198,14 @@ void loadBlazerFile(const string& path, string& accountId, string& applicationKe
     }
 }
 
-void printUsage(const Dispatcher& dispatcher) {
+void printVersion() {
    cout << "Blazer " << PACKAGE_VERSION <<  " (Backblaze B2 from the command line)" << endl;
    cout << "Copyright (c) 2016 Kruger Heavy Industries" << endl;
    cout << "http://www.krugerheavyindustries.com" << endl;
+}
+
+void printUsage(const Dispatcher& dispatcher) {
+   printVersion();
    cout << endl;
    cout << "Usage:" << endl;
    dispatcher.printUsages();
