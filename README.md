@@ -16,6 +16,11 @@ Then one can install the blazer application.
 
     sudo apt-get install blazer
 
+### OSX
+
+    brew tap KrugerHeavyIndustries/oss
+    brew install blazer
+
 ## Setting Up
 
 When you sign up with Backblaze you will be issued an account id and an
