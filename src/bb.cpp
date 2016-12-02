@@ -141,6 +141,7 @@ void BB::authorize() {
 auto_ptr<RestClient::Connection> BB::connect(const string& baseUrl) const {
    RestClient::Connection* connection = new RestClient::Connection(baseUrl);
    connection->SetUserAgent("cmd/blazer");
+   connection->SetNoSignal(true);
    return auto_ptr<RestClient::Connection>(connection);
 }
 
