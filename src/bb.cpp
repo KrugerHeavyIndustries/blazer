@@ -217,10 +217,13 @@ BB_Object BB::unpackObject(const Json& json) {
 }
 
 void BB::throwResponseError(const Json& json) {
-   int status = json.get("status").get<int>();
-   string code = json.get("code").get<string>();
-   string message = json.get("message").get<string>();
-   throw ResponseError(status, code, message);
+   if (json.isObject()) {
+      int status = json.get("status").get<int>();
+      string code = json.get("code").get<string>();
+      string message = json.get("message").get<string>();
+      throw ResponseError(status, code, message);
+   }
+   throw ResponseError(500, "internal_server_error", "B2 did not return a useful JSON error structure");
 }
 
 std::list<BB_Bucket>& BB::getBuckets(bool getContents, bool refresh) {
