@@ -81,13 +81,19 @@ UploadPartTask::~UploadPartTask() {
 }
 
 int UploadPartTask::run() {
-   ifstream fin(m_filepath.c_str(), ios::binary);
-   if(!fin.is_open()) {
-      throw std::runtime_error("could not read file " + m_filepath);
+   try {
+      ifstream fin(m_filepath.c_str(), ios::binary);
+      if(!fin.is_open()) {
+         cerr << "could not read file " <<  m_filepath << endl;
+         throw std::runtime_error("could not read file " + m_filepath);
+      }
+      BB::UploadUrlInfo uploadUrlInfo = m_bb.getUploadPartUrl(m_fileId);
+      m_hash = m_bb.uploadPart(uploadUrlInfo.uploadUrl, uploadUrlInfo.authorizationToken, m_index + 1, m_range, fin);
+   } catch (ResponseError& err) {
+      cerr << err.what() << endl;
+      throw;
    }
-   BB::UploadUrlInfo uploadUrlInfo = m_bb.getUploadPartUrl(m_fileId);
-   m_hash = m_bb.uploadPart(uploadUrlInfo.uploadUrl, uploadUrlInfo.authorizationToken, m_index + 1, m_range, fin);
-   return 0;
+   return EXIT_SUCCESS;
 }
 
 vector<string> UploadPartTask::map(const vector<UploadPartTask*>& uploads) {

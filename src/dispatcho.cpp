@@ -102,17 +102,18 @@ Task* Dispatcho::take() {
 }
 
 void* Dispatcho::threadMain(void* arg) {
+  int ret = EXIT_SUCCESS;
   pthread_t tid = pthread_self();
   Dispatcho* dispatcho = static_cast<Dispatcho*>(arg);
-  while (dispatcho->m_running) {
+  while (dispatcho->m_running && ret == EXIT_SUCCESS) {
       Task* task = dispatcho->take();
       if (task == NULL) {
           break;
       }
       assert(task);
-      task->run();
+      ret = task->run();
   }
-  return 0;
+  return reinterpret_cast<void*>(ret);
 }
 
 } // namespace khi
