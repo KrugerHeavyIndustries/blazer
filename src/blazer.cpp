@@ -84,7 +84,6 @@ int main(int argc, char * argv[]) {
    cmds.flags.insert("-t"); // type (Content-Type)
    cmds.flags.insert("-m"); // metadata
    cmds.parse(argc, argv);
-   size_t wordc = cmds.words.size();
     
    string accountId;
    string applicationKey;
@@ -143,12 +142,11 @@ int main(int argc, char * argv[]) {
    // Trim to just command name
    cmds.words[0] = cmds.words[0].substr(cmds.words[0].find_last_of('/') + 1);
    if (cmds.words[0] == "blazer") {
-       if (cmds.words.size() < 2) {
+       cmds.words.erase(cmds.words.begin());
+       if (!commands[cmds.words[0]]->valid(cmds.words.size())) {
            printUsage(commands);
            return EXIT_SUCCESS;
        }
-       cmds.words.erase(cmds.words.begin());
-       --wordc;
    }
     
    // First string in cmds.words[] array is command name, following strings are parameter strings
