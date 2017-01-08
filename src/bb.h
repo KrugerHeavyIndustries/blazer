@@ -134,9 +134,6 @@ class BB {
 
    static BB_Object unpackObject(const Json& json);
 
-   static void throwResponseError(const Json& json);
-   
-    
    public:
 
    BB(const std::string& accountId, const std::string& applicationKey);
@@ -150,7 +147,7 @@ class BB {
                                      
    void refreshBuckets(bool getContents);
     
-   void uploadFile(const std::string& bucketName, const std::string& localFileName, const std::string& remoteFileName, const std::string& contentType);
+   void uploadFile(const std::string& bucketName, const std::string& localFileName, const std::string& remoteFileName, const std::string& contentType, int numThreads = 1);
    
    void downloadFileById(const std::string& fileId, std::ofstream& fout);
      
@@ -185,7 +182,7 @@ class BB {
 
    void uploadSmall(const std::string& bucketId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, uint64_t totalBytes);
 
-   void uploadLarge(const std::string& buckedId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, uint64_t totalBytes);
+   void uploadLarge(const std::string& buckedId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, uint64_t totalBytes, int numThreads = 1);
 
    std::string startLargeFile(const std::string& bucketId, const std::string& fileName, const std::string& contentType);
 

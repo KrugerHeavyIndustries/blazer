@@ -49,15 +49,16 @@ int UploadFile::execute(size_t wordc, CommandLine& cmds, BB& bb) {
    parse2(idx, cmds, bucketName, localFilePath);
 
    string remoteFileName = cmds.words[idx];
-   string contentType = cmds.opts.exists("-t") ? cmds.opts.getWithDefault("-t", "") : MimeTypes::matchByExtension(localFilePath); 
+   string contentType = cmds.opts.exists("-t") ? cmds.opts.getWithDefault("-t", "") : MimeTypes::matchByExtension(localFilePath);
+   int numThreads = cmds.opts.exists("-n") ? cmds.opts.getWithDefault("-n", 1) : 1;
 
-   bb.uploadFile(bucketName, localFilePath, remoteFileName, contentType);
+   bb.uploadFile(bucketName, localFilePath, remoteFileName, contentType, numThreads);
    return EXIT_SUCCESS;
 }
 
 void UploadFile::printUsage() { 
    cout << "Upload file to backblaze:" << endl;
-   cout << "\tblazer upload_file [-t <contentType>] <bucketName> <localFilePath> <remoteFileName>" << endl;
+   cout << "\tblazer upload_file [-t <contentType>] [-n <numThreads>] <bucketName> <localFilePath> <remoteFileName>" << endl;
    cout << endl;
 }
 

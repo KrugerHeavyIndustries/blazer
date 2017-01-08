@@ -45,7 +45,9 @@
 using namespace std;
 
 namespace {
+
    using khi::BB_Bucket;
+
    struct find_name : std::unary_function<BB_Bucket, bool> {
       std::string name;
       find_name(const std::string& value) : name(value) {}
@@ -53,6 +55,23 @@ namespace {
          return b.name == name;
       }
    };
+
+   using khi::Json;
+   using khi::ResponseError;
+
+   const RestClient::Response& validate(const RestClient::Response& response) {
+      if (response.code == 200) {
+         return response;
+      }
+      const Json& json = Json::load(response.body);
+      if (json.isObject()) {
+         int status = json.get("status").get<int>();
+         string code = json.get("code").get<string>();
+         string message = json.get("message").get<string>();
+         throw ResponseError(status, code, message);
+      }
+      throw ResponseError(response.code, "other_error", response.body);
+   }
 }
 
 namespace khi {
@@ -127,10 +146,7 @@ void BB::authorize() {
       headers["Accept"] = "application/json";
       connection->SetHeaders(headers);
 
-      RestClient::Response response = connection->get("/b2_authorize_account");
-      if (response.code != 200) {
-         throwResponseError(Json::load(response.body));
-      }
+      RestClient::Response response = validate(connection->get("/b2_authorize_account"));
 
       Json json = Json::load(response.body);
       Json downloadUrl = json.get("downloadUrl");
@@ -222,16 +238,6 @@ BB_Object BB::unpackObject(const Json& json) {
    return object;
 }
 
-void BB::throwResponseError(const Json& json) {
-   if (json.isObject()) {
-      int status = json.get("status").get<int>();
-      string code = json.get("code").get<string>();
-      string message = json.get("message").get<string>();
-      throw ResponseError(status, code, message);
-   }
-   throw ResponseError(500, "internal_server_error", "B2 did not return a useful JSON error structure");
-}
-
 std::list<BB_Bucket>& BB::getBuckets(bool getContents, bool refresh) {
     if (refresh || m_buckets.empty())
         refreshBuckets(getContents);
@@ -265,10 +271,8 @@ const BB::UploadUrlInfo BB::getUploadUrl(const string& bucketId) const {
 
    Json payload = Json::object();
    payload.set("bucketId", Json::string(bucketId));
-   RestClient::Response response = connection->post("/b2_get_upload_url", payload.dump());
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   RestClient::Response response = validate(connection->post("/b2_get_upload_url", payload.dump()));
+
    Json json = Json::load(response.body);
 
    UploadUrlInfo info;
@@ -287,10 +291,8 @@ const BB::UploadUrlInfo BB::getUploadPartUrl(const string& fileId) const {
 
    Json payload = Json::object();
    payload.set("fileId", Json::string(fileId));
-   RestClient::Response response = connection->post("/b2_get_upload_part_url", payload.dump());
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   RestClient::Response response = validate(connection->post("/b2_get_upload_part_url", payload.dump()));
+
    Json json = Json::load(response.body);
 
    UploadUrlInfo info;
@@ -300,7 +302,7 @@ const BB::UploadUrlInfo BB::getUploadPartUrl(const string& fileId) const {
    return info;
 }
 
-void BB::uploadFile(const string& bucketName, const string& localFilePath, const string& remoteFileName, const string& contentType) {
+void BB::uploadFile(const string& bucketName, const string& localFilePath, const string& remoteFileName, const string& contentType, int numThreads) {
 
    BB_Bucket bucket = getBucket(bucketName);
 
@@ -312,7 +314,7 @@ void BB::uploadFile(const string& bucketName, const string& localFilePath, const
    if (totalBytes < minimumSplitSizeBytes) {
       uploadSmall(bucket.id, localFilePath, remoteFileName, contentType, totalBytes);
    } else {
-      uploadLarge(bucket.id, localFilePath, remoteFileName, contentType, totalBytes);
+      uploadLarge(bucket.id, localFilePath, remoteFileName, contentType, totalBytes, numThreads);
    }
 }
 
@@ -323,10 +325,8 @@ void BB::downloadFileById(const string& id, ofstream& fout) {
    headers["Authorization"] = m_session.authorizationToken;
    connection->SetHeaders(headers);
 
-   RestClient::Response response = connection->get("/b2_download_file_by_id?fileId=" + id);
-   if (response.code != 200) { 
-      throwResponseError(Json::load(response.body));
-   }
+   RestClient::Response response = validate(connection->get("/b2_download_file_by_id?fileId=" + id));
+
    fout << response.body;
    fout.close();
 }
@@ -338,10 +338,8 @@ void BB::downloadFileByName(const string& bucketName, const string& remoteFileNa
    headers["Authorization"] = m_session.authorizationToken;
    connection->SetHeaders(headers);
 
-   RestClient::Response response = connection->get("/" + bucketName+ "/" + remoteFileName);
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   RestClient::Response response = validate(connection->get("/" + bucketName+ "/" + remoteFileName));
+
    fout << response.body;
    fout.close();
 }
@@ -353,10 +351,9 @@ void BB::createBucket(const string& bucketName) {
    headers["Authorization"] = m_session.authorizationToken;
    connection->SetHeaders(headers);
 
-   RestClient::Response response = connection->get("/b2_create_bucket?accountId=" + m_accountId + "&bucketName=" + bucketName + "&bucketType=allPrivate");
-   if (response.code != 200) { 
-      throwResponseError(Json::load(response.body));
-   }
+   validate( 
+      connection->get("/b2_create_bucket?accountId=" + m_accountId + "&bucketName=" + bucketName + "&bucketType=allPrivate")
+   );
 }
 
 void BB::deleteBucket(const string& bucketId) {
@@ -366,10 +363,7 @@ void BB::deleteBucket(const string& bucketId) {
    headers["Authorization"] = m_session.authorizationToken;
    connection->SetHeaders(headers);
 
-   RestClient::Response response = connection->get("/b2_delete_bucket?accountId=" + m_accountId + "&bucketId=" + bucketId);
-   if (response.code != 200) { 
-      throwResponseError(Json::load(response.body));
-   }
+   validate(connection->get("/b2_delete_bucket?accountId=" + m_accountId + "&bucketId=" + bucketId));
 }
 
 void BB::updateBucket(const string& bucketId, const string& bucketType) {
@@ -385,10 +379,7 @@ void BB::updateBucket(const string& bucketId, const string& bucketType) {
    json.set("bucketId", Json::string(bucketId));
    json.set("bucketType", Json::string(bucketType));
 
-   RestClient::Response response = connection->post("/b2_update_bucket", json.dump());
-   if (response.code != 200) { 
-      throwResponseError(Json::load(response.body));
-   }
+   validate(connection->post("/b2_update_bucket", json.dump()));
 }
 
 std::list<BB_Object> BB::listFileVersions(const string& bucketId, const string& startFileName, const string& startFileId, int maxFileCount) {
@@ -409,11 +400,7 @@ std::list<BB_Object> BB::listFileVersions(const string& bucketId, const string& 
    }
    json.set("maxFileCount", Json::integer(maxFileCount));
 
-   RestClient::Response response = connection->post("/b2_list_file_versions", json.dump());
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
-   return unpackObjectsList(response.body);
+   return unpackObjectsList(validate(connection->post("/b2_list_file_versions", json.dump())).body);
 }
 
 void BB::deleteFileVersion(const string& fileName, const string& fileId) {
@@ -423,10 +410,7 @@ void BB::deleteFileVersion(const string& fileName, const string& fileId) {
    json.set("fileName", Json::string(fileName));
    json.set("fileId", Json::string(fileId));
    
-   RestClient::Response response = connection->post("/b2_delete_file_version", json.dump());
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   validate(connection->post("/b2_delete_file_version", json.dump()));
 }
 
 const BB_Object BB::getFileInfo(const string& fileId) { 
@@ -437,10 +421,7 @@ const BB_Object BB::getFileInfo(const string& fileId) {
    Json json = Json::object();
    json.set("fileId", Json::string(fileId));
 
-   RestClient::Response response = connection->post("/b2_get_file_info", json.dump());
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   RestClient::Response response = validate(connection->post("/b2_get_file_info", json.dump()));
    Json obj = Json::load(response.body);
    if (obj.isObject()) {
       object = unpackObject(obj);
@@ -455,10 +436,7 @@ void BB::hideFile(const string& bucketId, const string& fileName) {
    json.set("bucketId", Json::string(bucketId));
    json.set("fileName", Json::string(fileName));
 
-   RestClient::Response response = connection->post("/b2_hide_file", json.dump());
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   validate(connection->post("/b2_hide_file", json.dump()));
 }
 
 void BB::uploadSmall(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, uint64_t totalBytes) {
@@ -501,12 +479,10 @@ void BB::uploadSmall(const string& bucketId, const string& localFilePath, const 
 
    RestClient::Response response = connection->post("", string(buf, totalBytes));
    delete[] buf;
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   validate(response);
 }
 
-void BB::uploadLarge(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, uint64_t  totalBytes) {
+void BB::uploadLarge(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, uint64_t totalBytes, int numThreads) {
    ifstream fin(localFilePath.c_str(), ios::binary);
    if(!fin.is_open()) {
       throw std::runtime_error("could not read file " + localFilePath);
@@ -515,7 +491,7 @@ void BB::uploadLarge(const string& bucketId, const string& localFilePath, const 
    string fileId = startLargeFile(bucketId, remoteFileName, contentType);
    vector<BB_Range> ranges = choosePartRanges(totalBytes, MINIMUM_PART_SIZE_BYTES);
 
-   Dispatcho dispatcho;
+   Dispatcho dispatcho(numThreads);
 
    int index = 0;
    vector<UploadPartTask*> uploads;
@@ -551,9 +527,7 @@ string BB::startLargeFile(const string& bucketId, const string& fileName, const 
    json.set("contentType", Json::string(contentType));
 
    RestClient::Response response = connection->post("/b2_start_large_file", json.dump());
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   validate(response);
    return Json::load(response.body).get("fileId").get<string>();
 }
 
@@ -597,10 +571,8 @@ string BB::uploadPart(const string& uploadUrl, const string& authorizationToken,
    fs.close();
 
    RestClient::Response response = connection->post("", string(buf, range.length()));
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
    delete[] buf;
+   validate(response);
 
    return sha1hex.str();
 }
@@ -622,10 +594,7 @@ void BB::finishLargeFile(const string& fileId, const vector<string>& hashes) {
    }
    json.set("partSha1Array", array);
 
-   RestClient::Response response = connection->post("/b2_finish_large_file", json.dump());
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   validate(connection->post("/b2_finish_large_file", json.dump()));
 }
 
 vector<BB_Range> BB::choosePartRanges(uint64_t totalBytes, uint64_t minimumPartBytes) {
@@ -646,10 +615,7 @@ list<BB_Bucket> BB::listBuckets() {
    headers["Authorization"] = m_session.authorizationToken;
    connection->SetHeaders(headers);
 
-   RestClient::Response response = connection->get("/b2_list_buckets?accountId=" + m_accountId);
-   if (response.code != 200) {
-      throwResponseError(Json::load(response.body));
-   }
+   RestClient::Response response = validate(connection->get("/b2_list_buckets?accountId=" + m_accountId));
    return unpackBucketsList(response.body);
 }
 
@@ -662,10 +628,7 @@ list<BB_Object> BB::listBucket(const string& bucketName, const string& folderNam
 
    Json json = Json::object();
    json.set("bucketId", Json::string(getBucket(bucketName).id));
-   RestClient::Response response = connection->post("/b2_list_file_names", json.dump());
-   if (response.code != 200) { 
-      throwResponseError(Json::load(response.body));
-   }
+   RestClient::Response response = validate(connection->post("/b2_list_file_names", json.dump()));
    return unpackObjectsList(response.body);
 }
 
