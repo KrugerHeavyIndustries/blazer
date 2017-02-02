@@ -40,7 +40,7 @@ using std::string;
 using std::list;
 
 bool Ls::valid(size_t wordc) {
-   return (wordc == 2 || wordc == 3);
+   return (wordc == 2 || wordc == 3 || wordc == 4);
 }
 
 int Ls::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
@@ -50,18 +50,19 @@ int Ls::execute(size_t wordc, CommandLine& cmds, BB& bb) {
 
 void Ls::printUsage() { 
     std::cout << "List bucket contents:" << std::endl;
-    std::cout << "\tblazer ls <bucketName> [folderName]" << std::endl;
+    std::cout << "\tblazer ls <bucketName> [<startFileName>] [<maxFileCount>]" << std::endl;
     std::cout << std::endl;
 }
 
 void Ls::listBucket(CommandLine& cmds, BB& bb) {
    int idx = 1; 
    string bucketName;
-   string folderName;
+   string startFileName;
+   string maxFileCount;
 
-   parse2(idx, cmds, bucketName, folderName);
+   parse3(idx, cmds, bucketName, startFileName, maxFileCount);
 
-   list<BB_Object> files = bb.listBucket(bucketName);
+   list<BB_Object> files = bb.listBucket(bucketName, startFileName, parseOrDefault(maxFileCount, 100));
    std::for_each(files.begin(), files.end(), PrintObject(*this)); 
 }
 

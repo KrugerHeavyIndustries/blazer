@@ -27,6 +27,7 @@
 #include "command.h" 
 
 #include <ostream>
+#include <cstdlib>
 
 #include "bb.h"
 #include "commandline.h"
@@ -62,19 +63,32 @@ void Base::printObject(const BB_Object& object, bool longFormat) const {
 }
 
 void Base::parse1(int& idx, const CommandLine& cmds, string& position1) {
-   position1 = cmds.words[idx];
-   ++idx;
+   if (idx < static_cast<int>(cmds.words.size())) {
+      position1 = cmds.words[idx++];
+   }
 }
 
-void Base::parse2(int& idx, const CommandLine& cmds, string& position1, string& position2) { 
-   position1 = cmds.words[idx];
-   ++idx;
-   if (idx < static_cast<int>(cmds.words.size())) {
-      position2 = cmds.words[idx];
-      ++idx;
-   } else { 
-      position2 = "";
+void Base::parse2(int& idx, const CommandLine& cmds, string& position1, string& position2) {
+   parse1(idx, cmds, position1);
+   parse1(idx, cmds, position2);
+}
+
+void Base::parse3(int& idx, const CommandLine& cmds, string& position1, string& position2, string& position3) {
+   parse2(idx, cmds, position1, position2);
+   parse1(idx, cmds, position3);
+}
+
+void Base::parse4(int& idx, const CommandLine& cmds, string& position1, string& position2, string& position3, string& position4) {
+   parse3(idx, cmds, position1, position2, position3);
+   parse1(idx, cmds, position4);
+}
+
+int Base::parseOrDefault(const std::string& number, int def) const {
+   int rv = def;
+   if (sscanf(number.c_str(), "%d", &rv) < 0) {
+      return def;
    }
+   return rv;
 }
 
 } // namespace command

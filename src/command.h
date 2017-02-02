@@ -63,6 +63,12 @@ struct Base {
 
    void parse2(int& idx, const CommandLine& cmds, std::string& position1, std::string& position2);
 
+   void parse3(int& idx, const CommandLine& cmds, std::string& position1, std::string& position2, std::string& position3);
+
+   void parse4(int& idx, const CommandLine& cmds, std::string& position1, std::string& position2, std::string& position3, std::string& position4);
+
+   int parseOrDefault(const std::string& number, int def) const;
+
    struct PrintObject : public std::unary_function<BB_Object, void> { 
       const Base& m_command;
       PrintObject(const Base& command) : m_command(command) {

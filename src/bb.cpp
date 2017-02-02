@@ -619,7 +619,10 @@ list<BB_Bucket> BB::listBuckets() {
    return unpackBucketsList(response.body);
 }
 
-list<BB_Object> BB::listBucket(const string& bucketName, const string& folderName) {
+list<BB_Object> BB::listBucket(const string& bucketName, const string& startFileName, int maxFileCount) {
+   const int maxFileCountDefaults[2] = { 0, 100 }; // 0 means show 100, 100 means show 100
+   const int maxFileCountLimit = 1000;
+
    auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers;
@@ -628,6 +631,13 @@ list<BB_Object> BB::listBucket(const string& bucketName, const string& folderNam
 
    Json json = Json::object();
    json.set("bucketId", Json::string(getBucket(bucketName).id));
+   if (startFileName.size() > 0) {
+      json.set("startFileName", Json::string(startFileName));
+   }
+   if (maxFileCount != maxFileCountDefaults[0] && maxFileCount != maxFileCountDefaults[1]) {
+      maxFileCount = std::max(maxFileCount, maxFileCountLimit);
+      json.set("maxFileCount", Json::integer(maxFileCount));
+   }
    RestClient::Response response = validate(connection->post("/b2_list_file_names", json.dump()));
    return unpackObjectsList(response.body);
 }

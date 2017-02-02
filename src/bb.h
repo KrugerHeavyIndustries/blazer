@@ -163,7 +163,7 @@ class BB {
 
    std::list<BB_Object> listFileVersions(const std::string& bucketId, const std::string& startFileName = "", const std::string& startFileId = "", int maxFileCount = 0);
    
-   std::list<BB_Object> listBucket(const std::string& bucketName, const std::string& folderName = "");
+   std::list<BB_Object> listBucket(const std::string& bucketName, const std::string& startFileName = "", int maxFileCount = 100);
 
    const BB_Object getFileInfo(const std::string& fileId);
 

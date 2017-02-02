@@ -43,6 +43,7 @@ struct Ls : Base {
    private: 
    
    void listBucket(CommandLine& cmds, BB& bb);
+
 };
 
 }}
