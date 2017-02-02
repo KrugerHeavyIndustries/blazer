@@ -141,12 +141,15 @@ int main(int argc, char * argv[]) {
    // If symlinked, use the executable name to determine the desired operation
    // Trim to just command name
    cmds.words[0] = cmds.words[0].substr(cmds.words[0].find_last_of('/') + 1);
-   if (cmds.words[0] == "blazer") {
+   if (cmds.words[0] == "blazer" && cmds.words.size() > 1) {
        cmds.words.erase(cmds.words.begin());
-       if (!commands[cmds.words[0]]->valid(cmds.words.size())) {
+       if (!(commands.count(cmds.words[0]) > 0 && commands[cmds.words[0]]->valid(cmds.words.size()))) {
            printUsage(commands);
            return EXIT_SUCCESS;
        }
+   } else {
+      printUsage(commands);
+      return EXIT_SUCCESS;
    }
     
    // First string in cmds.words[] array is command name, following strings are parameter strings
