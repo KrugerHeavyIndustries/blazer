@@ -26,6 +26,7 @@
 
 #include "dispatcho.h"
 
+#include <cstdlib>
 #include <cassert>
 
 namespace khi {
