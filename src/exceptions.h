@@ -62,9 +62,9 @@ class ResponseError : Exception {
       m_what = std::string(tmp) + " " + m_code + " - " + m_message;
    }
 
-   int m_status;
-   std::string m_code;
-   std::string m_message;
+   const int m_status;
+   const std::string m_code;
+   const std::string m_message;
    std::string m_what;
 };
 

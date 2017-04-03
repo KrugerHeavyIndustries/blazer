@@ -124,9 +124,12 @@ class BB {
 
    std::list<BB_Bucket> m_buckets;
 
+   bool m_testMode;
+
    static const std::string API_URL_PATH;
    static const int MINIMUM_PART_SIZE_BYTES;
    static const int MAX_FILE_PARTS;
+   static const int DEFAULT_UPLOAD_RETRY_ATTEMPTS;
     
    static std::list<BB_Bucket> unpackBucketsList(const std::string& json);
 
@@ -177,6 +180,10 @@ class BB {
    const UploadUrlInfo getUploadUrl(const std::string& bucketId) const;
 
    const UploadUrlInfo getUploadPartUrl(const std::string& fileId) const;
+
+   int uploadRetryAttempts() const;
+
+   bool useTestMode();
 
    private:
 

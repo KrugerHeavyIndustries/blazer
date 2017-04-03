@@ -43,7 +43,7 @@ int GetFileInfo::execute(size_t wordc, CommandLine& cmds, BB& bb) {
    int idx = 1;
    string fileId;
    parse1(idx, cmds, fileId);
-   printObject(bb.getFileInfo(fileId));
+   printObject(bb.getFileInfo(fileId), true /* long info */);
    return EXIT_SUCCESS;
 }
 

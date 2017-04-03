@@ -79,6 +79,7 @@ namespace khi {
 const string BB::API_URL_PATH = "/b2api/v1";
 const int BB::MINIMUM_PART_SIZE_BYTES = 100 * 1000000; // 100 MB
 const int BB::MAX_FILE_PARTS = 10000;
+const int BB::DEFAULT_UPLOAD_RETRY_ATTEMPTS = 5;
 
 UploadPartTask::UploadPartTask(const BB& bb, const string& fileId, const BB_Range& range, int index, const string& filepath)
    :  Task(NULL, "upload_part_task"),
@@ -100,18 +101,25 @@ UploadPartTask::~UploadPartTask() {
 }
 
 int UploadPartTask::run() {
-   try {
-      ifstream fin(m_filepath.c_str(), ios::binary);
-      if(!fin.is_open()) {
-         cerr << "could not read file " <<  m_filepath << endl;
-         throw std::runtime_error("could not read file " + m_filepath);
+   int attempt = 0;
+   do {
+      try {
+         ifstream fin(m_filepath.c_str(), ios::binary);
+         if(!fin.is_open()) {
+            cerr << "could not read file " <<  m_filepath << endl;
+            throw std::runtime_error("could not read file " + m_filepath);
+         }
+         BB::UploadUrlInfo uploadUrlInfo = m_bb.getUploadPartUrl(m_fileId);
+         m_hash = m_bb.uploadPart(uploadUrlInfo.uploadUrl, uploadUrlInfo.authorizationToken, m_index + 1, m_range, fin);
+      } catch (const ResponseError& err) {
+         if (500 /* HTTP internal server error */ <= err.m_status && err.m_status <= 599 /* HTTP network connect timeout */ && attempt < m_bb_uploadRetryAttempts()) {
+            attempt++;
+         } else {
+            cerr << err.what() << endl;
+            throw;
+         }
       }
-      BB::UploadUrlInfo uploadUrlInfo = m_bb.getUploadPartUrl(m_fileId);
-      m_hash = m_bb.uploadPart(uploadUrlInfo.uploadUrl, uploadUrlInfo.authorizationToken, m_index + 1, m_range, fin);
-   } catch (ResponseError& err) {
-      cerr << err.what() << endl;
-      throw;
-   }
+   } while (m_hash.empty());
    return EXIT_SUCCESS;
 }
 
@@ -128,7 +136,8 @@ string UploadPartTask::result(const UploadPartTask* task) {
 BB::BB(const string& accountId, const string& applicationKey) :
    m_accountId(accountId),
    m_applicationKey(applicationKey),
-   m_session(Session::load())
+   m_session(Session::load()),
+   m_testMode(false)
 {
    RestClient::init();
 }
@@ -302,6 +311,14 @@ const BB::UploadUrlInfo BB::getUploadPartUrl(const string& fileId) const {
    return info;
 }
 
+int BB::uploadRetryAttempts() const {
+   return DEFAULT_UPLOAD_RETRY_ATTEMPTS;
+}
+
+bool BB::useTestMode() {
+   return (m_testMode = true);
+}
+
 void BB::uploadFile(const string& bucketName, const string& localFilePath, const string& remoteFileName, const string& contentType, int numThreads) {
 
    BB_Bucket bucket = getBucket(bucketName);
@@ -418,6 +435,11 @@ const BB_Object BB::getFileInfo(const string& fileId) {
 
    auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
    
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = m_session.authorizationToken;
+
+   connection->SetHeaders(headers);
+
    Json json = Json::object();
    json.set("fileId", Json::string(fileId));
 
@@ -465,6 +487,9 @@ void BB::uploadSmall(const string& bucketId, const string& localFilePath, const 
    headers["Content-Type"] = contentType;
    headers["X-Bz-File-Name"] = remoteFileName;
    headers["X-Bz-Content-Sha1"] = sha1hex.str();
+   if (m_testMode) {
+      headers["X-Bz-Test-Mode"] = "fail_some_uploads";
+   }
    connection->SetHeaders(headers);
 
    fin.clear();
@@ -556,6 +581,9 @@ string BB::uploadPart(const string& uploadUrl, const string& authorizationToken,
    //headers["Content-Type"] = "application/json; charset=utf-8";
    headers["X-Bz-Part-Number"] = convertPartNumber.str();
    headers["X-Bz-Content-Sha1"] = sha1hex.str();
+   if (m_testMode) {
+      headers["X-Bz-Test-Mode"] = "fail_some_uploads";
+   }
    headers["Content-Length"] = convertLength.str();
 
    connection->SetHeaders(headers);
