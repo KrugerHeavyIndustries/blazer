@@ -112,7 +112,7 @@ int UploadPartTask::run() {
          BB::UploadUrlInfo uploadUrlInfo = m_bb.getUploadPartUrl(m_fileId);
          m_hash = m_bb.uploadPart(uploadUrlInfo.uploadUrl, uploadUrlInfo.authorizationToken, m_index + 1, m_range, fin);
       } catch (const ResponseError& err) {
-         if (500 /* HTTP internal server error */ <= err.m_status && err.m_status <= 599 /* HTTP network connect timeout */ && attempt < m_bb_uploadRetryAttempts()) {
+         if (500 /* HTTP internal server error */ <= err.m_status && err.m_status <= 599 /* HTTP network connect timeout */ && attempt < m_bb.uploadRetryAttempts()) {
             attempt++;
          } else {
             cerr << err.what() << endl;
