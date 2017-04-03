@@ -28,6 +28,8 @@
 
 #include <iostream>
 
+#include "bb.h"
+
 namespace khi { 
 namespace command { 
 
@@ -38,6 +40,11 @@ bool DeleteFileVersion::valid(size_t wordc) {
 }
 
 int DeleteFileVersion::execute(size_t wordc, CommandLine& cmds, BB& bb) {
+   int idx = 1;
+   string fileId;
+   string fileVersion;
+   parse2(idx, cmds, fileId, fileVersion);
+   bb.deleteFileVersion(fileId, fileVersion);
    return EXIT_SUCCESS;
 }
 

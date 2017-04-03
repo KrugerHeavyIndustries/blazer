@@ -423,6 +423,10 @@ std::list<BB_Object> BB::listFileVersions(const string& bucketId, const string& 
 void BB::deleteFileVersion(const string& fileName, const string& fileId) {
    auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
    
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = m_session.authorizationToken;
+   connection->SetHeaders(headers);
+
    Json json = Json::object();
    json.set("fileName", Json::string(fileName));
    json.set("fileId", Json::string(fileId));
