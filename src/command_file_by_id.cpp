@@ -44,8 +44,7 @@ int FileById::execute(size_t wordc, CommandLine& cmds, BB& bb) {
    string localFilePath;
 
    parse2(idx, cmds, fileId, localFilePath);
-   ofstream fout(localFilePath.empty() ? fileId.c_str() : localFilePath.c_str(), ios_base::binary | ios_base::out);
-   bb.downloadFileById(fileId, fout);
+   bb.downloadFileById(fileId, localFilePath.empty() ? fileId.c_str() : localFilePath.c_str());
    return EXIT_SUCCESS;
 }
 

@@ -33,6 +33,7 @@
 #include <sstream>
 #include <algorithm>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "restclient-cpp/connection.h"
 #include "restclient-cpp/restclient.h"
@@ -78,6 +79,7 @@ namespace khi {
 
 const string BB::API_URL_PATH = "/b2api/v1";
 const int BB::MINIMUM_PART_SIZE_BYTES = 100 * 1000000; // 100 MB
+const int BB::MINIMUM_SPLIT_SIZE_BYTES = BB::MINIMUM_PART_SIZE_BYTES * 2;
 const int BB::MAX_FILE_PARTS = 10000;
 const int BB::DEFAULT_UPLOAD_RETRY_ATTEMPTS = 5;
 
@@ -95,7 +97,7 @@ UploadPartTask::UploadPartTask(const UploadPartTask& other)
       m_fileId(other.m_fileId),
       m_range(other.m_range),
       m_index(other.m_index),
-      m_filepath(other.m_filepath) {}
+      m_filepath(other.m_filepath) { }
 
 UploadPartTask::~UploadPartTask() {
 }
@@ -131,6 +133,93 @@ vector<string> UploadPartTask::map(const vector<UploadPartTask*>& uploads) {
 
 string UploadPartTask::result(const UploadPartTask* task) {
    return task->hash();
+}
+
+DownloadPartTask::DownloadPartTask(const BB& bb, const string& authorizationToken, const string& downloadUrl, const BB_Range& range, int index, const string& filepath)
+   :  Task(NULL, "download_part_task"),
+      m_bb(bb),
+      m_downloadUrl(downloadUrl),
+      m_authorizationToken(authorizationToken),
+      m_range(range),
+      m_index(index),
+      m_filepath(filepath),
+      m_result("failed") {
+}
+
+DownloadPartTask::DownloadPartTask(const DownloadPartTask& other)
+   :  Task(NULL, "download_part_task"),
+      m_bb(other.m_bb),
+      m_downloadUrl(other.m_downloadUrl),
+      m_authorizationToken(other.m_authorizationToken),
+      m_range(other.m_range),
+      m_index(other.m_index),
+      m_filepath(other.m_filepath),
+      m_result(other.m_result) {
+}
+
+DownloadPartTask::~DownloadPartTask() {
+}
+
+int DownloadPartTask::run() {
+   int attempt = 0;
+   do {
+      try {
+         struct stat st;
+         const string downloadPath = DownloadPartTask::downloadPath(m_filepath);
+         if (stat(downloadPath.c_str(), &st)) {
+            if (mkdir(downloadPath.c_str(), 0755) && errno != EEXIST) {
+               throw std::runtime_error("could not create download directory, possible race condition");
+            }
+         } else if(!S_ISDIR(st.st_mode)) {
+            throw std::runtime_error("could not create download directory, file with matching name exists");
+         }
+         const string filepart = DownloadPartTask::filepart(downloadPath, m_index);
+         ofstream fs(filepart.c_str(), ios_base::binary | ios_base::out);
+         m_result = m_bb.downloadPart(m_downloadUrl, m_authorizationToken, m_index, m_range, fs);
+      } catch(const ResponseError& err) {
+         if (500 /* HTTP internal server error */ <= err.m_status && err.m_status <= 599 /* HTTP network connect timeout */ && attempt < m_bb.uploadRetryAttempts()) {
+            attempt++;
+         } else {
+            cerr << err.what() << endl;
+            throw;
+         }
+      }
+   } while (m_result == "failed" /* try again until we throw in catch block */);
+   return EXIT_SUCCESS;
+}
+
+const string DownloadPartTask::filepart(const string& path, int index) {
+   ostringstream convertIndex;
+   convertIndex << "/";
+   convertIndex << "part";
+   convertIndex << index;
+   return path + convertIndex.str();
+}
+
+void DownloadPartTask::coalesce(const string& filepath, const vector<DownloadPartTask*>& downloads) {
+   ofstream out(filepath, ios_base::binary | ios_base::out);
+   const string downloadPath = DownloadPartTask::downloadPath(filepath);
+   vector<DownloadPartTask*>::const_iterator iter = downloads.begin();
+   for (;iter != downloads.end(); ++iter) {
+      const string filepart = DownloadPartTask::filepart(downloadPath, (*iter)->m_index);
+      ifstream in(filepart.c_str(), ios_base::binary);
+      out << in.rdbuf();
+      in.close();
+   }
+   out.close();
+   for (iter = downloads.begin(); iter != downloads.end(); ++iter) {
+      const string filepart = DownloadPartTask::filepart(downloadPath, (*iter)->m_index);
+      if (remove(filepart.c_str())) {
+         cerr << "error cleaning up temporary file " << filepart << endl;
+      }
+   }
+   if (rmdir(downloadPath.c_str())) {
+      cerr << "error removing temporary download directory " << downloadPath << endl;
+   }
+}
+
+const string DownloadPartTask::downloadPath(const string& filepath) {
+   return filepath + ".download";
 }
 
 BB::BB(const string& accountId, const string& applicationKey) :
@@ -323,32 +412,50 @@ void BB::uploadFile(const string& bucketName, const string& localFilePath, const
 
    BB_Bucket bucket = getBucket(bucketName);
 
-   uint64_t minimumSplitSizeBytes = MINIMUM_PART_SIZE_BYTES * 2;
-
    ifstream fsz(localFilePath.c_str(), ios::binary | ios::ate);
    uint64_t totalBytes = fsz.tellg();
 
-   if (totalBytes < minimumSplitSizeBytes) {
+   if (totalBytes < MINIMUM_SPLIT_SIZE_BYTES) {
       uploadSmall(bucket.id, localFilePath, remoteFileName, contentType, totalBytes);
    } else {
       uploadLarge(bucket.id, localFilePath, remoteFileName, contentType, totalBytes, numThreads);
    }
 }
 
-void BB::downloadFileById(const string& id, ofstream& fout) { 
+void BB::downloadFileById(const string& id, const string& localFilePath, int numThreads) {
    auto_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + API_URL_PATH);
 
-   RestClient::HeaderFields headers; 
-   headers["Authorization"] = m_session.authorizationToken;
-   connection->SetHeaders(headers);
+   BB_Object fileInfo = getFileInfo(id);
+   if (fileInfo.id != id) {
+      throw std::runtime_error("retrieved fileid does not match passed fileid");
+   }
 
-   RestClient::Response response = validate(connection->get("/b2_download_file_by_id?fileId=" + id));
+   vector<BB_Range> ranges = choosePartRanges(fileInfo.contentLength);
+   Dispatcho dispatcho(std::min(static_cast<size_t>(numThreads), ranges.size()));
 
-   fout << response.body;
-   fout.close();
+   const string downloadUrl = m_session.downloadUrl + API_URL_PATH + "/b2_download_file_by_id?fileId=" + id;
+
+   int index = 0;
+   vector<DownloadPartTask*> downloads;
+   for (vector<BB_Range>::const_iterator iter = ranges.begin(); iter != ranges.end(); ++iter) {
+      downloads.push_back(new DownloadPartTask(*this, m_session.authorizationToken, downloadUrl, *iter, index++, localFilePath));
+      dispatcho.async(downloads.back());
+   }
+
+   while (dispatcho.size() > 0) {
+      sleep(0);
+   }
+
+   dispatcho.stop();
+
+   DownloadPartTask::coalesce(localFilePath, downloads);
+
+   for (vector<DownloadPartTask*>::iterator iter = downloads.begin(); iter != downloads.end(); ++iter) {
+      delete (*iter);
+   }
 }
 
-void BB::downloadFileByName(const string& bucketName, const string& remoteFileName, ofstream& fout) {
+void BB::downloadFileByName(const string& bucketName, const string& remoteFileName, ofstream& fout, int numThreads) {
    auto_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + "/file");
 
    RestClient::HeaderFields headers; 
@@ -518,7 +625,7 @@ void BB::uploadLarge(const string& bucketId, const string& localFilePath, const 
    }
 
    string fileId = startLargeFile(bucketId, remoteFileName, contentType);
-   vector<BB_Range> ranges = choosePartRanges(totalBytes, MINIMUM_PART_SIZE_BYTES);
+   vector<BB_Range> ranges = choosePartRanges(totalBytes);
 
    Dispatcho dispatcho(numThreads);
 
@@ -609,6 +716,21 @@ string BB::uploadPart(const string& uploadUrl, const string& authorizationToken,
    return sha1hex.str();
 }
 
+string BB::downloadPart(const string& downloadUrl, const string& authorizationToken, int index, const BB_Range& range, ofstream& fs) const {
+   auto_ptr<RestClient::Connection> connection = connect(downloadUrl);
+
+   RestClient::HeaderFields headers;
+   headers["Authorization"] = authorizationToken;
+   headers["Range"] = rangeHeader(range);
+
+   connection->SetHeaders(headers);
+
+   RestClient::Response response = connection->get("");
+   fs << response.body;
+   fs.close();
+   return "ok";
+}
+
 void BB::finishLargeFile(const string& fileId, const vector<string>& hashes) {
    auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
@@ -629,15 +751,23 @@ void BB::finishLargeFile(const string& fileId, const vector<string>& hashes) {
    validate(connection->post("/b2_finish_large_file", json.dump()));
 }
 
-vector<BB_Range> BB::choosePartRanges(uint64_t totalBytes, uint64_t minimumPartBytes) {
+vector<BB_Range> BB::choosePartRanges(uint64_t totalBytes) {
    vector<BB_Range> ranges;
-   uint64_t n = std::min(totalBytes / minimumPartBytes, static_cast<uint64_t>(MAX_FILE_PARTS));
-   uint64_t minus1 = n - 1;
-   uint64_t partBytes = totalBytes / n;
+   const uint64_t n = std::max(1ull, std::min(totalBytes / MINIMUM_PART_SIZE_BYTES, static_cast<uint64_t>(MAX_FILE_PARTS)));
+   const uint64_t nminus1 = n - 1;
+   const uint64_t partBytes = totalBytes / n;
    for (int i = 0; i < n; ++i) {
-      ranges.push_back(BB_Range(i * partBytes, (i < minus1 ? (i + 1) * partBytes : totalBytes) - 1));
+      ranges.push_back(BB_Range(i * partBytes, (i < nminus1 ? (i + 1) * partBytes : totalBytes) - 1));
    }
    return ranges;
+}
+
+string BB::rangeHeader(const BB_Range& range) const {
+   ostringstream start;
+   ostringstream end;
+   start << range.start;
+   end << range.end;
+   return "bytes=" + start.str() + "-" + end.str();
 }
 
 list<BB_Bucket> BB::listBuckets() {

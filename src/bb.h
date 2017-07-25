@@ -85,7 +85,7 @@ class BB;
 
 class UploadPartTask : public Task {
 
-public:
+   public:
 
    UploadPartTask(const BB& bb, const std::string& fileId, const BB_Range& range, int index, const std::string& filepath);
    UploadPartTask(const UploadPartTask&);
@@ -113,9 +113,39 @@ public:
    std::string m_hash;
 };
 
+class DownloadPartTask : public Task {
+
+   public:
+
+   DownloadPartTask(const BB& bb, const std::string& authorizationToken, const std::string& downloadUrl, const BB_Range& range, int index, const std::string& filepath);
+   DownloadPartTask(const DownloadPartTask&);
+
+   virtual ~DownloadPartTask();
+
+   virtual int run();
+
+   static const std::string filepart(const std::string& path, int index);
+   static void coalesce(const std::string& filepath, const std::vector<DownloadPartTask*>& downloads);
+
+   private:
+
+   DownloadPartTask& operator=(const DownloadPartTask&); // prevent assign
+
+   static const std::string downloadPath(const std::string& filepath);
+
+   const BB& m_bb;
+   const std::string& m_authorizationToken;
+   const std::string& m_downloadUrl;
+   const BB_Range& m_range;
+   const int m_index;
+   const std::string& m_filepath;
+   std::string m_result;
+};
+
 class BB {
 
    friend class UploadPartTask;
+   friend class DownloadPartTask;
 
    std::string m_accountId;
    std::string m_applicationKey;
@@ -128,6 +158,7 @@ class BB {
 
    static const std::string API_URL_PATH;
    static const int MINIMUM_PART_SIZE_BYTES;
+   static const int MINIMUM_SPLIT_SIZE_BYTES;
    static const int MAX_FILE_PARTS;
    static const int DEFAULT_UPLOAD_RETRY_ATTEMPTS;
     
@@ -152,9 +183,9 @@ class BB {
     
    void uploadFile(const std::string& bucketName, const std::string& localFileName, const std::string& remoteFileName, const std::string& contentType, int numThreads = 1);
    
-   void downloadFileById(const std::string& fileId, std::ofstream& fout);
+   void downloadFileById(const std::string& fileId, const std::string& localFilePath, int numThreads = 1);
      
-   void downloadFileByName(const std::string& bucketName, const std::string& remoteFileName, std::ofstream& fout);
+   void downloadFileByName(const std::string& bucketName, const std::string& remoteFileName, std::ofstream& fout, int numThreads = 1);
 
    void deleteFileVersion(const std::string& fileName, const std::string& fileId);
 
@@ -195,9 +226,13 @@ class BB {
 
    std::string uploadPart(const std::string& uploadUrl, const std::string& authorizationToken, int partNumber, const BB_Range& range, std::ifstream& fs) const;
 
+   std::string downloadPart(const std::string& downloadUrl, const std::string& authorizationToken, int partNumber, const BB_Range& range, std::ofstream& fs) const;
+
    void finishLargeFile(const std::string& fileId, const std::vector<std::string>& partsSha1);
 
-   std::vector<BB_Range> choosePartRanges(uint64_t totalBytes, uint64_t minimumPartBytes);
+   std::vector<BB_Range> choosePartRanges(uint64_t totalBytes);
+
+   std::string rangeHeader(const BB_Range& range) const;
 
    std::auto_ptr<RestClient::Connection> connect(const std::string& baseUrl) const;
  
