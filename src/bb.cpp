@@ -754,7 +754,7 @@ void BB::finishLargeFile(const string& fileId, const vector<string>& hashes) {
 
 vector<BB_Range> BB::choosePartRanges(uint64_t totalBytes) {
    vector<BB_Range> ranges;
-   const uint64_t n = std::max(1ul, std::min(totalBytes / MINIMUM_PART_SIZE_BYTES, static_cast<uint64_t>(MAX_FILE_PARTS)));
+   const uint64_t n = std::max(static_cast<uint64_t>(1u), std::min(totalBytes / MINIMUM_PART_SIZE_BYTES, static_cast<uint64_t>(MAX_FILE_PARTS)));
    const uint64_t nminus1 = n - 1;
    const uint64_t partBytes = totalBytes / n;
    for (int i = 0; i < n; ++i) {
