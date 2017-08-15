@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #include "restclient-cpp/connection.h"
 #include "restclient-cpp/restclient.h"
@@ -197,7 +198,7 @@ const string DownloadPartTask::filepart(const string& path, int index) {
 }
 
 void DownloadPartTask::coalesce(const string& filepath, const vector<DownloadPartTask*>& downloads) {
-   ofstream out(filepath, ios_base::binary | ios_base::out);
+   ofstream out(filepath.c_str(), ios_base::binary | ios_base::out);
    const string downloadPath = DownloadPartTask::downloadPath(filepath);
    vector<DownloadPartTask*>::const_iterator iter = downloads.begin();
    for (;iter != downloads.end(); ++iter) {
@@ -753,7 +754,7 @@ void BB::finishLargeFile(const string& fileId, const vector<string>& hashes) {
 
 vector<BB_Range> BB::choosePartRanges(uint64_t totalBytes) {
    vector<BB_Range> ranges;
-   const uint64_t n = std::max(1ull, std::min(totalBytes / MINIMUM_PART_SIZE_BYTES, static_cast<uint64_t>(MAX_FILE_PARTS)));
+   const uint64_t n = std::max(1ul, std::min(totalBytes / MINIMUM_PART_SIZE_BYTES, static_cast<uint64_t>(MAX_FILE_PARTS)));
    const uint64_t nminus1 = n - 1;
    const uint64_t partBytes = totalBytes / n;
    for (int i = 0; i < n; ++i) {
