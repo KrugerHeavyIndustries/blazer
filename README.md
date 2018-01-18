@@ -1,6 +1,7 @@
 # Blazer
 
 ![Maintained: yes](https://img.shields.io/badge/maintained-yes-brightgreen.svg)
+[![Donate](https://img.shields.io/badge/paypal-donate-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ULDAESU9WDWKG)
 
 This program provides command line access to [Backblaze](https://www.backblaze.com/b2/cloud-storage.html) 
 B2 cloud storage service.
