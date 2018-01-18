@@ -1,5 +1,7 @@
 # Blazer
 
+![Maintained: yes](https://img.shields.io/badge/maintained-yes-brightgreen.svg)
+
 This program provides command line access to [Backblaze](https://www.backblaze.com/b2/cloud-storage.html) 
 B2 cloud storage service.
 
