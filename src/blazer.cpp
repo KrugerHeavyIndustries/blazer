@@ -201,7 +201,7 @@ void loadBlazerFile(const string& path, string& accountId, string& applicationKe
 
 void printVersion() {
    cout << "Blazer " << PACKAGE_VERSION <<  " (Backblaze B2 from the command line)" << endl;
-   cout << "Copyright (c) 2017 Kruger Heavy Industries" << endl;
+   cout << "Copyright (c) 2016-2018 Kruger Heavy Industries" << endl;
    cout << "http://www.krugerheavyindustries.com" << endl;
 }
 

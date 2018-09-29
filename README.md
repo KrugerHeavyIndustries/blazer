@@ -7,7 +7,7 @@
 This program provides command line access to [Backblaze](https://www.backblaze.com/b2/cloud-storage.html) 
 B2 cloud storage service.
 
-It is currently an early work but is usable.
+Blazer is used actively on a daily basis as part of a backup solution for mission critical data.
 
 ## Installation
 
