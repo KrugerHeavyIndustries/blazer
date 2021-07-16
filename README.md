@@ -25,6 +25,15 @@ Then one can install the blazer application.
     brew tap KrugerHeavyIndustries/oss
     brew install blazer
 
+### Build from source
+
+Ensure restclient-cpp, openssl and jansson libraries are available on the
+build system.
+
+    autoreconf --install --force
+    ./configure
+    make install
+
 ## Setting Up
 
 When you sign up with Backblaze you will be issued an account id and an
