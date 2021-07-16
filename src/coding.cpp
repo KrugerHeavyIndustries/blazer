@@ -34,6 +34,26 @@
 
 using namespace std;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+namespace {
+   // OpenSSL 1.1.0 and up define new EVP digest routines.
+   // These anonymous namespaced versions are for compatability with
+   // previous versions
+   EVP_MD_CTX* EVP_MD_CTX_new() {
+      void* ret = OPENSSL_malloc(sizeof(EVP_MD_CTX));
+      if (ret != NULL) {
+         memset(ret, 0, sizeof(EVP_MD_CTX));
+      }
+      return static_cast<EVP_MD_CTX*>(ret);
+   }
+
+   void EVP_MD_CTX_free(EVP_MD_CTX* ctx) {
+        EVP_MD_CTX_cleanup(ctx);
+        OPENSSL_free(ctx);
+   }
+}  // namespace
+#endif
+
 // Encode binary data in ASCII form using base 64
 std::string encodeB64(uint8_t * data, size_t dataLen)
 {
@@ -59,20 +79,20 @@ const streamsize kMD5_ChunkSize = 16384;
 const char * hexchars = "0123456789abcdef";
 size_t computeMD5(uint8_t md5[EVP_MAX_MD_SIZE], std::istream& istrm)
 {
-    EVP_MD_CTX ctx;
-    EVP_DigestInit(&ctx, EVP_md5());
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    EVP_DigestInit(ctx, EVP_md5());
     
     uint8_t * buf = new uint8_t[kMD5_ChunkSize];
     while (istrm) {
         istrm.read((char*)buf, kMD5_ChunkSize);
         streamsize count = istrm.gcount();
-        EVP_DigestUpdate(&ctx, buf, count);
+        EVP_DigestUpdate(ctx, buf, count);
     }
     delete[] buf;
     
     unsigned int mdLen;
-    EVP_DigestFinal_ex(&ctx, md5, &mdLen);
-    EVP_MD_CTX_cleanup(&ctx);
+    EVP_DigestFinal_ex(ctx, md5, &mdLen);
+    EVP_MD_CTX_free(ctx);
     return mdLen;
 }
 
@@ -97,10 +117,10 @@ size_t computeSha1(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& stream) {
 }
 
 size_t computeSha1UsingRange(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& stream, uint64_t firstByte, uint64_t lastByte) {
-   EVP_MD_CTX ctx;
    unsigned int length;
 
-   EVP_DigestInit(&ctx, EVP_sha1());
+   EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+   EVP_DigestInit(ctx, EVP_sha1());
 
    stream.seekg(firstByte, ios::beg);
 
@@ -110,12 +130,12 @@ size_t computeSha1UsingRange(uint8_t sha1[EVP_MAX_MD_SIZE], std::istream& stream
    while (stream && remainBytes > 0) {
       stream.read((char*)buf, std::min(static_cast<uint64_t>(kMD5_ChunkSize), remainBytes));
       streamsize count = stream.gcount();
-      EVP_DigestUpdate(&ctx, buf, count);
+      EVP_DigestUpdate(ctx, buf, count);
       remainBytes -= count;
    }
 
-   EVP_DigestFinal_ex(&ctx, sha1, &length);
-   EVP_MD_CTX_cleanup(&ctx);
+   EVP_DigestFinal_ex(ctx, sha1, &length);
+   EVP_MD_CTX_free(ctx);
    return length;
 }
 
