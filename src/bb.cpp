@@ -312,7 +312,7 @@ BB_Object BB::unpackObject(const Json& json) {
 
    Json contentLength = json.get("contentLength");
    if (contentLength.isInteger())
-      object.contentLength = contentLength.get<int>();
+      object.contentLength = contentLength.get<uint64_t>();
 
    Json contentType = json.get("contentType");
    if (contentType.isString())
@@ -332,7 +332,7 @@ BB_Object BB::unpackObject(const Json& json) {
 
    Json uploadTimestamp = json.get("uploadTimestamp");
    if (uploadTimestamp.isInteger()) 
-      object.uploadTimestamp = uploadTimestamp.get<int>();
+      object.uploadTimestamp = uploadTimestamp.get<uint64_t>();
 
    return object;
 }

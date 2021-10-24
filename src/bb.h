@@ -52,7 +52,7 @@ class Json;
 struct BB_Object { 
    std::string id;
    std::string name;
-   int contentLength; 
+   uint64_t contentLength;
    std::string contentType; 
    std::string contentSha1; 
    std::string action; 
@@ -78,7 +78,7 @@ struct BB_Range {
    inline BB_Range(uint64_t s, uint64_t e) : start(s), end(e) {}
    inline BB_Range(const BB_Range& other) : start(other.start), end(other.end) {}
 
-   int length() const { return static_cast<int>(end - start) + 1; }
+   uint64_t length() const { return static_cast<uint64_t>(end - start) + 1; }
 };
 
 class BB;
