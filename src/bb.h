@@ -126,6 +126,7 @@ class DownloadPartTask : public Task {
 
    static const std::string filepart(const std::string& path, int index);
    static void coalesce(const std::string& filepath, const std::vector<DownloadPartTask*>& downloads);
+   static void cleanup(const std::string& filepath, const std::vector<DownloadPartTask*>& downloads);
 
    private:
 
@@ -181,11 +182,11 @@ class BB {
                                      
    void refreshBuckets(bool getContents);
     
-   void uploadFile(const std::string& bucketName, const std::string& localFileName, const std::string& remoteFileName, const std::string& contentType, int numThreads = 1);
+   int uploadFile(const std::string& bucketName, const std::string& localFileName, const std::string& remoteFileName, const std::string& contentType, int numThreads = 1);
    
-   void downloadFileById(const std::string& fileId, const std::string& localFilePath, int numThreads = 1);
+   int downloadFileById(const std::string& fileId, const std::string& localFilePath, int numThreads = 1);
      
-   void downloadFileByName(const std::string& bucketName, const std::string& remoteFileName, std::ofstream& fout, int numThreads = 1);
+   int downloadFileByName(const std::string& bucketName, const std::string& remoteFileName, std::ofstream& fout, int numThreads = 1);
 
    void deleteFileVersion(const std::string& fileName, const std::string& fileId);
 
@@ -218,9 +219,9 @@ class BB {
 
    private:
 
-   void uploadSmall(const std::string& bucketId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, uint64_t totalBytes);
+   int uploadSmall(const std::string& bucketId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, uint64_t totalBytes);
 
-   void uploadLarge(const std::string& buckedId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, uint64_t totalBytes, int numThreads = 1);
+   int uploadLarge(const std::string& buckedId, const std::string& localFilePath, const std::string& remoteFileName, const std::string& contentType, uint64_t totalBytes, int numThreads = 1);
 
    std::string startLargeFile(const std::string& bucketId, const std::string& fileName, const std::string& contentType);
 

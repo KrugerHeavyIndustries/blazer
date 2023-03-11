@@ -29,10 +29,18 @@
 #include <cstdlib>
 #include <cassert>
 
+#include <algorithm>
+
 namespace khi {
+
+struct AllExitSuccess
+{
+   bool operator() (const int c) const { return c == EXIT_SUCCESS; }
+};
 
 Dispatcho::Dispatcho(int numThreads) { 
    m_numThreads = numThreads; 
+   m_results = new int[m_numThreads]();
    createThreads();
    m_running = true;
 }
@@ -60,20 +68,27 @@ int Dispatcho::async(Task* task) {
    return size; 
 }
 
-void Dispatcho::stop() { 
+int Dispatcho::stop() {
+   int ret = EXIT_SUCCESS;
    if (!m_running) { 
-      return;
+      return EXIT_FAILURE;
    }
    m_running = false;
    pthread_cond_broadcast(&m_condition);
 
    for (int i = 0; i < m_numThreads; i++) {
-      pthread_join(m_threads[i], NULL);
+      pthread_join(m_threads[i], reinterpret_cast<void**>(&m_results[i]));
    }
 
+
+   ret = std::all_of(m_results, m_results + m_numThreads, AllExitSuccess()) ? EXIT_SUCCESS : EXIT_FAILURE;
+
+   delete [] m_results;
    delete [] m_threads;
    pthread_mutex_destroy(&m_mutex);
    pthread_cond_destroy(&m_condition);
+
+   return ret;
 }
 
 int Dispatcho::size() {
@@ -85,16 +100,18 @@ int Dispatcho::size() {
 
 Task* Dispatcho::take() {
    Task* task = NULL;
-   pthread_mutex_lock(&m_mutex);
    if (m_running) {
       while (m_queue.empty() && m_running) {
+          pthread_mutex_lock(&m_mutex);
           pthread_cond_wait(&m_condition, &m_mutex);
+          pthread_mutex_unlock(&m_mutex);
       }
       assert(!m_queue.empty());
+      pthread_mutex_lock(&m_mutex);
       task = m_queue.front();
       m_queue.pop_front();
+      pthread_mutex_unlock(&m_mutex);
    }
-   pthread_mutex_unlock(&m_mutex);
    return task;
 }
 
@@ -108,9 +125,13 @@ void* Dispatcho::threadMain(void* arg) {
           break;
       }
       assert(task);
-      ret = task->run();
+      try {
+         ret = task->run();
+      } catch (...) {
+	 ret = EXIT_FAILURE;
+      }
   }
-  return reinterpret_cast<void*>(ret);
+  pthread_exit(reinterpret_cast<void*>(ret));
 }
 
 } // namespace khi

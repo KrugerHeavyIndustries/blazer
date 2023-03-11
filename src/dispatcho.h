@@ -67,7 +67,7 @@ public:
 
    int async(Task* task); 
 
-   void stop();
+   int stop();
 
    int size();
 
@@ -86,6 +86,7 @@ private:
    int m_numThreads; 
    std::deque<Task*> m_queue;
 
+   int* m_results;
    pthread_t* m_threads;
    pthread_mutex_t m_mutex;
    pthread_cond_t  m_condition;

@@ -116,6 +116,8 @@ int UploadPartTask::run() {
          m_hash = m_bb.uploadPart(uploadUrlInfo.uploadUrl, uploadUrlInfo.authorizationToken, m_index + 1, m_range, fin);
       } catch (const ResponseError& err) {
          if (500 /* HTTP internal server error */ <= err.m_status && err.m_status <= 599 /* HTTP network connect timeout */ && attempt < m_bb.uploadRetryAttempts()) {
+            /* sleep for 5 seconds multiplied by number of the attempt before resuming */
+            sleep((attempt + 1) * 5);
             attempt++;
          } else {
             cerr << err.what() << endl;
@@ -208,7 +210,12 @@ void DownloadPartTask::coalesce(const string& filepath, const vector<DownloadPar
       in.close();
    }
    out.close();
-   for (iter = downloads.begin(); iter != downloads.end(); ++iter) {
+   DownloadPartTask::cleanup(filepath, downloads);
+}
+
+void DownloadPartTask::cleanup(const string& filepath, const vector<DownloadPartTask*>& downloads) {
+   const string downloadPath = DownloadPartTask::downloadPath(filepath);
+   for (vector<DownloadPartTask*>::const_iterator iter = downloads.begin(); iter != downloads.end(); ++iter) {
       const string filepart = DownloadPartTask::filepart(downloadPath, (*iter)->m_index);
       if (remove(filepart.c_str())) {
          cerr << "error cleaning up temporary file " << filepart << endl;
@@ -409,7 +416,7 @@ bool BB::useTestMode() {
    return (m_testMode = true);
 }
 
-void BB::uploadFile(const string& bucketName, const string& localFilePath, const string& remoteFileName, const string& contentType, int numThreads) {
+int BB::uploadFile(const string& bucketName, const string& localFilePath, const string& remoteFileName, const string& contentType, int numThreads) {
 
    BB_Bucket bucket = getBucket(bucketName);
 
@@ -417,13 +424,13 @@ void BB::uploadFile(const string& bucketName, const string& localFilePath, const
    uint64_t totalBytes = fsz.tellg();
 
    if (totalBytes < MINIMUM_SPLIT_SIZE_BYTES) {
-      uploadSmall(bucket.id, localFilePath, remoteFileName, contentType, totalBytes);
+      return uploadSmall(bucket.id, localFilePath, remoteFileName, contentType, totalBytes);
    } else {
-      uploadLarge(bucket.id, localFilePath, remoteFileName, contentType, totalBytes, numThreads);
+      return uploadLarge(bucket.id, localFilePath, remoteFileName, contentType, totalBytes, numThreads);
    }
 }
 
-void BB::downloadFileById(const string& id, const string& localFilePath, int numThreads) {
+int BB::downloadFileById(const string& id, const string& localFilePath, int numThreads) {
    auto_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + API_URL_PATH);
 
    BB_Object fileInfo = getFileInfo(id);
@@ -447,16 +454,22 @@ void BB::downloadFileById(const string& id, const string& localFilePath, int num
       sleep(0);
    }
 
-   dispatcho.stop();
+   int rc = dispatcho.stop();
 
-   DownloadPartTask::coalesce(localFilePath, downloads);
+   if (rc == EXIT_SUCCESS) {
+      DownloadPartTask::coalesce(localFilePath, downloads);
+   } else if (rc == EXIT_FAILURE) {
+      DownloadPartTask::cleanup(localFilePath, downloads);
+   }
 
    for (vector<DownloadPartTask*>::iterator iter = downloads.begin(); iter != downloads.end(); ++iter) {
       delete (*iter);
    }
+
+   return rc;
 }
 
-void BB::downloadFileByName(const string& bucketName, const string& remoteFileName, ofstream& fout, int numThreads) {
+int BB::downloadFileByName(const string& bucketName, const string& remoteFileName, ofstream& fout, int numThreads) {
    auto_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + "/file");
 
    RestClient::HeaderFields headers; 
@@ -467,6 +480,8 @@ void BB::downloadFileByName(const string& bucketName, const string& remoteFileNa
 
    fout << response.body;
    fout.close();
+
+   return EXIT_SUCCESS;
 }
 
 void BB::createBucket(const string& bucketName) { 
@@ -573,7 +588,7 @@ void BB::hideFile(const string& bucketId, const string& fileName) {
    validate(connection->post("/b2_hide_file", json.dump()));
 }
 
-void BB::uploadSmall(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, uint64_t totalBytes) {
+int BB::uploadSmall(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, uint64_t totalBytes) {
    ifstream fin(localFilePath.c_str(), ios::binary);
    if(!fin.is_open()) {
       throw std::runtime_error("could not read file " + localFilePath);
@@ -617,9 +632,11 @@ void BB::uploadSmall(const string& bucketId, const string& localFilePath, const 
    RestClient::Response response = connection->post("", string(buf, totalBytes));
    delete[] buf;
    validate(response);
+
+   return EXIT_SUCCESS;
 }
 
-void BB::uploadLarge(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, uint64_t totalBytes, int numThreads) {
+int BB::uploadLarge(const string& bucketId, const string& localFilePath, const string& remoteFileName, const string& contentType, uint64_t totalBytes, int numThreads) {
    ifstream fin(localFilePath.c_str(), ios::binary);
    if(!fin.is_open()) {
       throw std::runtime_error("could not read file " + localFilePath);
@@ -641,13 +658,15 @@ void BB::uploadLarge(const string& bucketId, const string& localFilePath, const 
       sleep(0);
    }
 
-   dispatcho.stop();
+   int rc = dispatcho.stop();
 
    finishLargeFile(fileId, UploadPartTask::map(uploads));
 
    for (vector<UploadPartTask*>::iterator iter = uploads.begin(); iter != uploads.end(); ++iter) {
       delete (*iter);
    }
+
+   return rc;
 }
 
 string BB::startLargeFile(const string& bucketId, const string& fileName, const string& contentType) {

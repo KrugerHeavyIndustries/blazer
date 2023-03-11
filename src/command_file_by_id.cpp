@@ -44,8 +44,7 @@ int FileById::execute(size_t wordc, CommandLine& cmds, BB& bb) {
    string localFilePath;
 
    parse2(idx, cmds, fileId, localFilePath);
-   bb.downloadFileById(fileId, localFilePath.empty() ? fileId.c_str() : localFilePath.c_str());
-   return EXIT_SUCCESS;
+   return bb.downloadFileById(fileId, localFilePath.empty() ? fileId.c_str() : localFilePath.c_str());
 }
 
 void FileById::printUsage() { 
