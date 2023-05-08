@@ -235,7 +235,7 @@ class BB {
 
    std::string rangeHeader(const BB_Range& range) const;
 
-   std::auto_ptr<RestClient::Connection> connect(const std::string& baseUrl) const;
+   std::unique_ptr<RestClient::Connection> connect(const std::string& baseUrl) const;
  
    std::list<BB_Bucket> listBuckets();
 };
