@@ -245,7 +245,7 @@ BB::~BB() {
 
 void BB::authorize() {
    if (m_session.unknown()) {
-      auto_ptr<RestClient::Connection> connection = connect("https://api.backblaze.com" + API_URL_PATH);
+      unique_ptr<RestClient::Connection> connection = connect("https://api.backblaze.com" + API_URL_PATH);
       connection->SetBasicAuth(m_accountId, m_applicationKey);
 
       RestClient::HeaderFields headers;
@@ -266,11 +266,11 @@ void BB::authorize() {
    }
 }
 
-auto_ptr<RestClient::Connection> BB::connect(const string& baseUrl) const {
+unique_ptr<RestClient::Connection> BB::connect(const string& baseUrl) const {
    RestClient::Connection* connection = new RestClient::Connection(baseUrl);
    connection->SetUserAgent("cmd/blazer");
    connection->SetNoSignal(true);
-   return auto_ptr<RestClient::Connection>(connection);
+   return unique_ptr<RestClient::Connection>(connection);
 }
 
 list<BB_Bucket> BB::unpackBucketsList(const string& json) {
@@ -369,7 +369,7 @@ void BB::refreshBuckets(bool getContents) {
 }
 
 const BB::UploadUrlInfo BB::getUploadUrl(const string& bucketId) const {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers;
    headers["Authorization"] = m_session.authorizationToken;
@@ -389,7 +389,7 @@ const BB::UploadUrlInfo BB::getUploadUrl(const string& bucketId) const {
 }
 
 const BB::UploadUrlInfo BB::getUploadPartUrl(const string& fileId) const {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers;
    headers["Authorization"] = m_session.authorizationToken;
@@ -431,7 +431,7 @@ int BB::uploadFile(const string& bucketName, const string& localFilePath, const 
 }
 
 int BB::downloadFileById(const string& id, const string& localFilePath, int numThreads) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + API_URL_PATH);
 
    BB_Object fileInfo = getFileInfo(id);
    if (fileInfo.id != id) {
@@ -470,7 +470,7 @@ int BB::downloadFileById(const string& id, const string& localFilePath, int numT
 }
 
 int BB::downloadFileByName(const string& bucketName, const string& remoteFileName, ofstream& fout, int numThreads) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + "/file");
+   unique_ptr<RestClient::Connection> connection = connect(m_session.downloadUrl + "/file");
 
    RestClient::HeaderFields headers; 
    headers["Authorization"] = m_session.authorizationToken;
@@ -485,7 +485,7 @@ int BB::downloadFileByName(const string& bucketName, const string& remoteFileNam
 }
 
 void BB::createBucket(const string& bucketName) { 
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers; 
    headers["Authorization"] = m_session.authorizationToken;
@@ -497,7 +497,7 @@ void BB::createBucket(const string& bucketName) {
 }
 
 void BB::deleteBucket(const string& bucketId) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers; 
    headers["Authorization"] = m_session.authorizationToken;
@@ -507,7 +507,7 @@ void BB::deleteBucket(const string& bucketId) {
 }
 
 void BB::updateBucket(const string& bucketId, const string& bucketType) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
    
    RestClient::HeaderFields headers; 
    headers["Authorization"] = m_session.authorizationToken;
@@ -523,7 +523,7 @@ void BB::updateBucket(const string& bucketId, const string& bucketType) {
 }
 
 std::list<BB_Object> BB::listFileVersions(const string& bucketId, const string& startFileName, const string& startFileId, int maxFileCount) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers;
    headers["Authorization"] = m_session.authorizationToken;
@@ -544,7 +544,7 @@ std::list<BB_Object> BB::listFileVersions(const string& bucketId, const string& 
 }
 
 void BB::deleteFileVersion(const string& fileName, const string& fileId) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
    
    RestClient::HeaderFields headers;
    headers["Authorization"] = m_session.authorizationToken;
@@ -560,7 +560,7 @@ void BB::deleteFileVersion(const string& fileName, const string& fileId) {
 const BB_Object BB::getFileInfo(const string& fileId) { 
    BB_Object object;
 
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
    
    RestClient::HeaderFields headers;
    headers["Authorization"] = m_session.authorizationToken;
@@ -579,7 +579,7 @@ const BB_Object BB::getFileInfo(const string& fileId) {
 }
 
 void BB::hideFile(const string& bucketId, const string& fileName) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    Json json = Json::object();
    json.set("bucketId", Json::string(bucketId));
@@ -607,7 +607,7 @@ int BB::uploadSmall(const string& bucketId, const string& localFilePath, const s
       sha1hex << std::setw(2) << (unsigned int)(*ptr);
    }
 
-   auto_ptr<RestClient::Connection> connection = connect(uploadUrlInfo.uploadUrl);
+   unique_ptr<RestClient::Connection> connection = connect(uploadUrlInfo.uploadUrl);
 
    RestClient::HeaderFields headers;
    headers["Authorization"] = uploadUrlInfo.authorizationToken;
@@ -670,7 +670,7 @@ int BB::uploadLarge(const string& bucketId, const string& localFilePath, const s
 }
 
 string BB::startLargeFile(const string& bucketId, const string& fileName, const string& contentType) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers;
    headers["Authorization"] = m_session.authorizationToken;
@@ -688,7 +688,7 @@ string BB::startLargeFile(const string& bucketId, const string& fileName, const 
 }
 
 string BB::uploadPart(const string& uploadUrl, const string& authorizationToken, int partNumber, const BB_Range& range, ifstream& fs) const {
-   auto_ptr<RestClient::Connection> connection = connect(uploadUrl);
+   unique_ptr<RestClient::Connection> connection = connect(uploadUrl);
 
    uint8_t sha1[EVP_MAX_MD_SIZE];
    size_t length = computeSha1UsingRange(sha1, fs, range.start, range.end);
@@ -737,7 +737,7 @@ string BB::uploadPart(const string& uploadUrl, const string& authorizationToken,
 }
 
 string BB::downloadPart(const string& downloadUrl, const string& authorizationToken, int index, const BB_Range& range, ofstream& fs) const {
-   auto_ptr<RestClient::Connection> connection = connect(downloadUrl);
+   unique_ptr<RestClient::Connection> connection = connect(downloadUrl);
 
    RestClient::HeaderFields headers;
    headers["Authorization"] = authorizationToken;
@@ -752,7 +752,7 @@ string BB::downloadPart(const string& downloadUrl, const string& authorizationTo
 }
 
 void BB::finishLargeFile(const string& fileId, const vector<string>& hashes) {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers;
    headers["Authorization"] = m_session.authorizationToken;
@@ -791,7 +791,7 @@ string BB::rangeHeader(const BB_Range& range) const {
 }
 
 list<BB_Bucket> BB::listBuckets() {
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers;
    headers["Authorization"] = m_session.authorizationToken;
@@ -805,7 +805,7 @@ list<BB_Object> BB::listBucket(const string& bucketName, const string& startFile
    const int maxFileCountDefaults[2] = { 0, 100 }; // 0 means show 100, 100 means show 100
    const int maxFileCountLimit = 1000;
 
-   auto_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
+   unique_ptr<RestClient::Connection> connection = connect(m_session.apiUrl + API_URL_PATH);
 
    RestClient::HeaderFields headers;
    headers["Authorization"] = m_session.authorizationToken;
