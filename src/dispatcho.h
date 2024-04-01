@@ -67,6 +67,8 @@ public:
 
    int async(Task* task); 
 
+   int workoff();
+
    int stop();
 
    int size();
@@ -83,6 +85,8 @@ private:
    static void* threadMain(void* threadData);
 
    volatile bool m_running;
+   volatile bool m_drain;
+
    int m_numThreads; 
    std::deque<Task*> m_queue;
 

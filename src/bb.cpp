@@ -5,7 +5,7 @@
 // |__|\__|___|__|_______|_______|_______|___|__|
 //        H E A V Y  I N D U S T R I E S
 //
-// Copyright (C) 2016 Kruger Heavy Industries
+// Copyright (C) 2024 Kruger Heavy Industries
 // http://www.krugerheavyindustries.com
 // 
 // This software is provided 'as-is', without any express or implied
@@ -109,19 +109,21 @@ int UploadPartTask::run() {
       try {
          ifstream fin(m_filepath.c_str(), ios::binary);
          if(!fin.is_open()) {
-            cerr << "could not read file " <<  m_filepath << endl;
             throw std::runtime_error("could not read file " + m_filepath);
          }
+
          BB::UploadUrlInfo uploadUrlInfo = m_bb.getUploadPartUrl(m_fileId);
+
          m_hash = m_bb.uploadPart(uploadUrlInfo.uploadUrl, uploadUrlInfo.authorizationToken, m_index + 1, m_range, fin);
       } catch (const ResponseError& err) {
          if (500 /* HTTP internal server error */ <= err.m_status && err.m_status <= 599 /* HTTP network connect timeout */ && attempt < m_bb.uploadRetryAttempts()) {
+            cerr << "err.m_status = " << err.m_status << " attempt: " <<  attempt << endl;
             /* sleep for 5 seconds multiplied by number of the attempt before resuming */
             sleep((attempt + 1) * 5);
             attempt++;
          } else {
-            cerr << err.what() << endl;
-            throw;
+            cerr << "giving up: " << err.what() << endl;
+            throw err;
          }
       }
    } while (m_hash.empty());
@@ -230,11 +232,11 @@ const string DownloadPartTask::downloadPath(const string& filepath) {
    return filepath + ".download";
 }
 
-BB::BB(const string& accountId, const string& applicationKey) :
+BB::BB(const string& accountId, const string& applicationKey, bool testMode) :
    m_accountId(accountId),
    m_applicationKey(applicationKey),
    m_session(Session::load()),
-   m_testMode(false)
+   m_testMode(testMode)
 {
    RestClient::init();
 }
@@ -413,7 +415,7 @@ int BB::uploadRetryAttempts() const {
 }
 
 bool BB::useTestMode() {
-   return (m_testMode = true);
+   return (m_testMode);
 }
 
 int BB::uploadFile(const string& bucketName, const string& localFilePath, const string& remoteFileName, const string& contentType, int numThreads) {
@@ -448,10 +450,6 @@ int BB::downloadFileById(const string& id, const string& localFilePath, int numT
    for (vector<BB_Range>::const_iterator iter = ranges.begin(); iter != ranges.end(); ++iter) {
       downloads.push_back(new DownloadPartTask(*this, m_session.authorizationToken, downloadUrl, *iter, index++, localFilePath));
       dispatcho.async(downloads.back());
-   }
-
-   while (dispatcho.size() > 0) {
-      sleep(0);
    }
 
    int rc = dispatcho.stop();
@@ -643,6 +641,7 @@ int BB::uploadLarge(const string& bucketId, const string& localFilePath, const s
    }
 
    string fileId = startLargeFile(bucketId, remoteFileName, contentType);
+
    vector<BB_Range> ranges = choosePartRanges(totalBytes);
 
    Dispatcho dispatcho(numThreads);
@@ -654,13 +653,11 @@ int BB::uploadLarge(const string& bucketId, const string& localFilePath, const s
       dispatcho.async(uploads.back());
    }
 
-   while (dispatcho.size() > 0) {
-      sleep(0);
+   int rc = dispatcho.workoff();
+
+   if (rc == EXIT_SUCCESS) {
+      finishLargeFile(fileId, UploadPartTask::map(uploads));
    }
-
-   int rc = dispatcho.stop();
-
-   finishLargeFile(fileId, UploadPartTask::map(uploads));
 
    for (vector<UploadPartTask*>::iterator iter = uploads.begin(); iter != uploads.end(); ++iter) {
       delete (*iter);
@@ -682,8 +679,7 @@ string BB::startLargeFile(const string& bucketId, const string& fileName, const 
    json.set("fileName", Json::string(fileName));
    json.set("contentType", Json::string(contentType));
 
-   RestClient::Response response = connection->post("/b2_start_large_file", json.dump());
-   validate(response);
+   RestClient::Response response = validate(connection->post("/b2_start_large_file", json.dump()));
    return Json::load(response.body).get("fileId").get<string>();
 }
 

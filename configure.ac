@@ -1,4 +1,4 @@
-AC_INIT([blazer], [0.4.6], [blazer@krugerheavyindustries.com])
+AC_INIT([blazer], [0.4.7], [blazer@krugerheavyindustries.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_CXX
 AC_PROG_CC
