@@ -43,6 +43,7 @@ Dispatcho::Dispatcho(int numThreads) {
    m_results = new int[m_numThreads]();
    createThreads();
    m_running = true;
+   m_drain = false;
 }
 
 Dispatcho::~Dispatcho() { 
@@ -68,18 +69,30 @@ int Dispatcho::async(Task* task) {
    return size; 
 }
 
-int Dispatcho::stop() {
+int Dispatcho::workoff() {
    int ret = EXIT_SUCCESS;
    if (!m_running) { 
       return EXIT_FAILURE;
    }
-   m_running = false;
+   m_drain = true;
    pthread_cond_broadcast(&m_condition);
 
    for (int i = 0; i < m_numThreads; i++) {
       pthread_join(m_threads[i], reinterpret_cast<void**>(&m_results[i]));
    }
 
+   ret = std::all_of(m_results, m_results + m_numThreads, AllExitSuccess()) ? EXIT_SUCCESS : EXIT_FAILURE;
+
+   return ret;
+}
+
+int Dispatcho::stop() {
+   int ret = EXIT_SUCCESS;
+   if (!m_running) {
+      return EXIT_FAILURE;
+   }
+   m_running = false;
+   pthread_cond_broadcast(&m_condition);
 
    ret = std::all_of(m_results, m_results + m_numThreads, AllExitSuccess()) ? EXIT_SUCCESS : EXIT_FAILURE;
 
@@ -100,8 +113,10 @@ int Dispatcho::size() {
 
 Task* Dispatcho::take() {
    Task* task = NULL;
+   if (m_queue.empty() && m_drain)
+      return task;
    if (m_running) {
-      while (m_queue.empty() && m_running) {
+      while (m_queue.empty()) {
           pthread_mutex_lock(&m_mutex);
           pthread_cond_wait(&m_condition, &m_mutex);
           pthread_mutex_unlock(&m_mutex);
@@ -128,7 +143,7 @@ void* Dispatcho::threadMain(void* arg) {
       try {
          ret = task->run();
       } catch (...) {
-	 ret = EXIT_FAILURE;
+         ret = EXIT_FAILURE;
       }
   }
   pthread_exit(reinterpret_cast<void*>(ret));

@@ -50,14 +50,14 @@ using namespace std;
 using namespace khi;
 using namespace khi::command;
 
-void loadBlazerFile(const string& path, string& accountId, string& applicatioKey, string& name, int verbosity = 0);
+void loadBlazerFile(const string& path, string& accountId, string& applicatioKey, string& name);
 
 void printVersion();
 
 void printUsage(const Dispatcher& commands);
 
 int main(int argc, char * argv[]) {
-   
+
    int verbosity = 1;
 
    Dispatcher commands;
@@ -83,6 +83,7 @@ int main(int argc, char * argv[]) {
    cmds.flags.insert("-c"); // credentials file
    cmds.flags.insert("-t"); // type (Content-Type)
    cmds.flags.insert("-m"); // metadata
+   cmds.flags.insert("-x"); // test mode
    cmds.parse(argc, argv);
     
    string accountId;
@@ -91,6 +92,8 @@ int main(int argc, char * argv[]) {
    string apiUrl; 
    string downloadUrl;
    string name;
+
+   bool testMode = false;
     
    struct passwd* pw = getpwuid(geteuid());
    string home(pw->pw_dir);
@@ -101,9 +104,14 @@ int main(int argc, char * argv[]) {
    }
 
    if (cmds.hasFlag("-d")) {
-       verbosity = cmds.opts.getWithDefault("-d", 2);
-       if(verbosity > 0)
-           cout << "Verbose output level " << verbosity << endl;
+      int verbosity = cmds.opts.getWithDefault("-d", 2);
+      if (verbosity > 0) {
+         cout << "Verbose output level " << verbosity << endl;
+      }
+   }
+
+   if (cmds.hasFlag("-x")) {
+      testMode = true;
    }
     
    ifstream file;
@@ -177,26 +185,26 @@ int main(int argc, char * argv[]) {
    return result;
 }
 
-void loadBlazerFile(const string& path, string& accountId, string& applicationKey, string& name, int verbosity) {
-    ifstream cred(path.c_str());
-    if (cred) {
-        while (cred) {
-            string cmd;
-            cred >> cmd;
-            if (cmd == "accountId")
-                cred >> accountId;
-            else if (cmd == "applicationKey")
-                cred >> applicationKey;
-            else if (cmd == "name") {
-                cred >> name;
-            }
-        }
-        if (verbosity >= 2)
-            cout << "using credentials from " << path << ", name: " << name << endl;
-    } else {
-        cerr << "Error: Could not load credentials file from " << path << "." << endl;
-        exit(EXIT_FAILURE);
-    }
+void loadBlazerFile(const string& path, string& accountId, string& applicationKey, string& name) {
+   bool isName = false;
+   ifstream cred(path.c_str());
+   if (cred) {
+      while (cred) {
+         string cmd;
+         cred >> cmd;
+         if (cmd == "accountId")
+             cred >> accountId;
+         else if (cmd == "applicationKey")
+             cred >> applicationKey;
+         else if (cmd == "name") {
+             isName = true;
+             cred >> name;
+         }
+     }
+   } else {
+     cerr << "Error: Could not load credentials file from " << path << "." << endl;
+     exit(EXIT_FAILURE);
+   }
 }
 
 void printVersion() {

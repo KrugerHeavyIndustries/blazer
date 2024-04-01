@@ -148,8 +148,8 @@ class BB {
    friend class UploadPartTask;
    friend class DownloadPartTask;
 
-   std::string m_accountId;
-   std::string m_applicationKey;
+   const std::string m_accountId;
+   const std::string m_applicationKey;
    
    Session m_session;
 
@@ -171,7 +171,7 @@ class BB {
 
    public:
 
-   BB(const std::string& accountId, const std::string& applicationKey);
+   BB(const std::string& accountId, const std::string& applicationKey, bool testMode = false);
    ~BB();
 
    void authorize();
