@@ -50,6 +50,15 @@ namespace {
 
    using khi::BB_Bucket;
 
+#if __cplusplus > 201402L
+   struct find_name {
+      std::string name;
+      find_name(const std::string& value) : name(value) {}
+      constexpr bool operator()(const BB_Bucket& b) const {
+         return b.name == name;
+      }
+   };
+#else
    struct find_name : std::unary_function<BB_Bucket, bool> {
       std::string name;
       find_name(const std::string& value) : name(value) {}
@@ -57,6 +66,7 @@ namespace {
          return b.name == name;
       }
    };
+#endif //  __cplusplus > 201402L
 
    using khi::Json;
    using khi::ResponseError;

@@ -69,14 +69,25 @@ struct Base {
 
    int parseOrDefault(const std::string& number, int def) const;
 
-   struct PrintObject : public std::unary_function<BB_Object, void> { 
+#if __cplusplus > 201402L
+   struct PrintObject {
       const Base& m_command;
       PrintObject(const Base& command) : m_command(command) {
       }
-      void operator()(const BB_Object& file) const { 
+      constexpr void operator()(const BB_Object& file) const {
          m_command.printObject(file);
-      } 
+      }
    };
+#else
+   struct PrintObject : public std::unary_function<BB_Object, void> {
+      const Base& m_command;
+      PrintObject(const Base& command) : m_command(command) {
+      }
+      void operator()(const BB_Object& file) const {
+         m_command.printObject(file);
+      }
+   };
+#endif // __cplusplus > 201402L
 
    friend struct PrintObject;
 };
