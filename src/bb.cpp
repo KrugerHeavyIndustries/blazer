@@ -451,6 +451,7 @@ int BB::downloadFileById(const string& id, const string& localFilePath, int numT
    }
 
    vector<BB_Range> ranges = choosePartRanges(fileInfo.contentLength);
+
    Dispatcho dispatcho(std::min(static_cast<size_t>(numThreads), ranges.size()));
 
    const string downloadUrl = m_session.downloadUrl + API_URL_PATH + "/b2_download_file_by_id?fileId=" + id;
@@ -462,7 +463,7 @@ int BB::downloadFileById(const string& id, const string& localFilePath, int numT
       dispatcho.async(downloads.back());
    }
 
-   int rc = dispatcho.stop();
+   int rc = dispatcho.workoff();
 
    if (rc == EXIT_SUCCESS) {
       DownloadPartTask::coalesce(localFilePath, downloads);

@@ -27,8 +27,6 @@
 #include "dispatcho.h"
 
 #include <cstdlib>
-#include <cassert>
-
 #include <algorithm>
 
 namespace khi {
@@ -41,12 +39,12 @@ struct AllExitSuccess
 Dispatcho::Dispatcho(int numThreads) { 
    m_numThreads = numThreads; 
    m_results = new int[m_numThreads]();
-   createThreads();
    m_running = true;
    m_drain = false;
+   createThreads();
 }
 
-Dispatcho::~Dispatcho() { 
+Dispatcho::~Dispatcho() {
    stop(); 
 }
 
@@ -54,28 +52,30 @@ int Dispatcho::createThreads() {
    pthread_mutex_init(&m_mutex, NULL);
    pthread_cond_init(&m_condition, NULL);
    m_threads = new pthread_t[m_numThreads];
-   for (int i = 0; i < m_numThreads; ++i) { 
+   for (int i = 0; i < m_numThreads; ++i) {
       pthread_create(&m_threads[i], NULL, threadMain, this);
    }
    return 0;
 }
 
-int Dispatcho::async(Task* task) { 
+int Dispatcho::async(Task* task) {
    pthread_mutex_lock(&m_mutex);
    m_queue.push_back(task);
    int size = m_queue.size();
    pthread_mutex_unlock(&m_mutex);
    pthread_cond_signal(&m_condition);
-   return size; 
+   return size;
 }
 
 int Dispatcho::workoff() {
    int ret = EXIT_SUCCESS;
-   if (!m_running) { 
+   if (!m_running) {
       return EXIT_FAILURE;
    }
+   pthread_mutex_lock(&m_mutex);
    m_drain = true;
    pthread_cond_broadcast(&m_condition);
+   pthread_mutex_unlock(&m_mutex);
 
    for (int i = 0; i < m_numThreads; i++) {
       pthread_join(m_threads[i], reinterpret_cast<void**>(&m_results[i]));
@@ -91,8 +91,14 @@ int Dispatcho::stop() {
    if (!m_running) {
       return EXIT_FAILURE;
    }
+   pthread_mutex_lock(&m_mutex);
    m_running = false;
    pthread_cond_broadcast(&m_condition);
+   pthread_mutex_unlock(&m_mutex);
+
+   for (int i = 0; i < m_numThreads; i++) {
+      pthread_join(m_threads[i], NULL);
+   }
 
    ret = std::all_of(m_results, m_results + m_numThreads, AllExitSuccess()) ? EXIT_SUCCESS : EXIT_FAILURE;
 
@@ -113,33 +119,26 @@ int Dispatcho::size() {
 
 Task* Dispatcho::take() {
    Task* task = NULL;
-   if (m_queue.empty() && m_drain)
-      return task;
-   if (m_running) {
-      while (m_queue.empty()) {
-          pthread_mutex_lock(&m_mutex);
-          pthread_cond_wait(&m_condition, &m_mutex);
-          pthread_mutex_unlock(&m_mutex);
-      }
-      assert(!m_queue.empty());
-      pthread_mutex_lock(&m_mutex);
+   pthread_mutex_lock(&m_mutex);
+   while (m_queue.empty() && m_running && !m_drain) {
+      pthread_cond_wait(&m_condition, &m_mutex);
+   }
+   if (!m_queue.empty()) {
       task = m_queue.front();
       m_queue.pop_front();
-      pthread_mutex_unlock(&m_mutex);
    }
+   pthread_mutex_unlock(&m_mutex);
    return task;
 }
 
 void* Dispatcho::threadMain(void* arg) {
   int ret = EXIT_SUCCESS;
-  pthread_t tid = pthread_self();
   Dispatcho* dispatcho = static_cast<Dispatcho*>(arg);
   while (dispatcho->m_running && ret == EXIT_SUCCESS) {
       Task* task = dispatcho->take();
       if (task == NULL) {
           break;
       }
-      assert(task);
       try {
          ret = task->run();
       } catch (...) {
