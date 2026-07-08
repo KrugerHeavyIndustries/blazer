@@ -83,6 +83,7 @@ int main(int argc, char * argv[]) {
    cmds.flags.insert("-c"); // credentials file
    cmds.flags.insert("-t"); // type (Content-Type)
    cmds.flags.insert("-m"); // metadata
+   cmds.flags.insert("-n"); // number of threads
    cmds.flags.insert("-x"); // test mode
    cmds.parse(argc, argv);
     
