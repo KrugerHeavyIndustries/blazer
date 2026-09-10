@@ -1,5 +1,5 @@
 // vim:set et ts=3 sw=3:
-// __  __ ______ _______ _______ _______ ______ 
+// __  __ ______ _______ _______ _______ ______
 // |  |/  |   __ \   |   |     __|    ___|   __ \
 // |     <|      <   |   |    |  |    ___|      <
 // |__|\__|___|__|_______|_______|_______|___|__|
@@ -7,15 +7,15 @@
 //
 // Copyright (C) 2016 Kruger Heavy Industries
 // http://www.krugerheavyindustries.com
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -26,33 +26,21 @@
 
 #include "command_list_buckets.h"
 
+#include <iostream>
+
 #include "bb.h"
 
 namespace khi {
 namespace command {
 
-bool ListBuckets::valid(size_t wordc) {
-   return (wordc == 1);
-}
-
-int ListBuckets::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
-   listBuckets(cmds, bb);
+int ListBuckets::run() {
+   auto bb = createBB();
+   std::list<BB_Bucket>& buckets = bb->getBuckets(false, true);
+   for (auto& bkt : buckets) {
+      std::cout << bkt.id << " " << bkt.type << " " << bkt.name << std::endl;
+   }
    return EXIT_SUCCESS;
 }
 
-void ListBuckets::printUsage() { 
-    std::cout << "List all buckets:" << std::endl;
-    std::cout << "\tblazer list_buckets" << std::endl;
-    std::cout << std::endl;
-}
-
-void ListBuckets::listBuckets(CommandLine& cmds, BB& bb) { 
-   std::list<BB_Bucket>& buckets = bb.getBuckets(false, true);
-   std::list<BB_Bucket>::iterator bkt;
-
-   for (bkt = buckets.begin(); bkt != buckets.end(); ++bkt) {
-      std::cout << bkt->id << " " << bkt->type << " " << bkt->name << std::endl;
-   }
-}
-} // namespace command 
+} // namespace command
 } // namespace khi

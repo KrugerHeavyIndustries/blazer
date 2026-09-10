@@ -34,8 +34,6 @@ namespace khi {
 
 struct MimeTypes {
 
-   static void initialize(); 
-
    static std::string matchByExtension(const std::string& filename);
 
    private: 

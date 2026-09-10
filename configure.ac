@@ -4,6 +4,8 @@ AC_PROG_CXX
 AC_PROG_CC
 AC_CONFIG_HEADERS([src/config.h])
 
+AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
+
 #PKG_CHECK_MODULES([openssl], [openssl > 1.1.0])
 
 ACCEPT_SSL_LIB="no"
@@ -16,6 +18,7 @@ AC_CHECK_LIB([restclient-cpp], [main])
 AC_CHECK_LIB([jansson], [main])
 AC_CHECK_LIB([pthread], [main])
 AC_CHECK_LIB([curl], [main])
+AC_CHECK_LIB([fmt], [main], [], [AC_MSG_FAILURE([can't find libfmt])])
 AC_CONFIG_FILES([
   Makefile
   src/Makefile

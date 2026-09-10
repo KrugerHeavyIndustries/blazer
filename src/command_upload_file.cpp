@@ -1,5 +1,5 @@
 // vim:set et ts=3 sw=3:
-// __  __ ______ _______ _______ _______ ______ 
+// __  __ ______ _______ _______ _______ ______
 // |  |/  |   __ \   |   |     __|    ___|   __ \
 // |     <|      <   |   |    |  |    ___|      <
 // |__|\__|___|__|_______|_______|_______|___|__|
@@ -7,15 +7,15 @@
 //
 // Copyright (C) 2016 Kruger Heavy Industries
 // http://www.krugerheavyindustries.com
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -26,41 +26,20 @@
 
 #include "command_upload_file.h"
 
-#include <ostream>
-
-#include "commandline.h"
-#include "mimetypes.h"
 #include "bb.h"
+#include "mimetypes.h"
 
-namespace khi { 
+namespace khi {
 namespace command {
 
-using namespace std;
-
-bool UploadFile::valid(size_t wordc) { 
-   return wordc > 1;
-}
-
-int UploadFile::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
-   int idx = 1;
-   string bucketName;
-   string localFilePath; 
-
-   parse2(idx, cmds, bucketName, localFilePath);
-
-   string remoteFileName = cmds.words[idx];
-   string contentType = cmds.opts.exists("-t") ? cmds.opts.getWithDefault("-t", "") : MimeTypes::matchByExtension(localFilePath);
-   int numThreads = cmds.opts.exists("-n") ? cmds.opts.getWithDefault("-n", 1) : 1;
-
-   bb.uploadFile(bucketName, localFilePath, remoteFileName, contentType, numThreads);
+int UploadFile::run() {
+   auto bb = createBB();
+   std::string type = (*content_type).empty()
+      ? MimeTypes::matchByExtension(*local_file_path)
+      : *content_type;
+   bb->uploadFile(*bucket_name, *local_file_path, *remote_file_name, type, *num_threads);
    return EXIT_SUCCESS;
 }
 
-void UploadFile::printUsage() { 
-   cout << "Upload file to backblaze:" << endl;
-   cout << "\tblazer upload_file [-t <contentType>] [-n <numThreads>] <bucketName> <localFilePath> <remoteFileName>" << endl;
-   cout << endl;
-}
-
-} // namespace command 
+} // namespace command
 } // namespace khi

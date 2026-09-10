@@ -1,5 +1,5 @@
 // vim:set et ts=3 sw=3:
-// __  __ ______ _______ _______ _______ ______ 
+// __  __ ______ _______ _______ _______ ______
 // |  |/  |   __ \   |   |     __|    ___|   __ \
 // |     <|      <   |   |    |  |    ___|      <
 // |__|\__|___|__|_______|_______|_______|___|__|
@@ -7,15 +7,15 @@
 //
 // Copyright (C) 2016 Kruger Heavy Industries
 // http://www.krugerheavyindustries.com
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -27,21 +27,22 @@
 #ifndef COMMAND_FILE_BY_ID_H
 #define COMMAND_FILE_BY_ID_H
 
-#include "command.h" 
+#include "command.h"
 
-class CommandLine; 
-using khi::BB;
+namespace khi {
+namespace command {
 
-namespace khi { 
-namespace command { 
+struct FileById : BlazerCommand {
 
-struct FileById : Base { 
+   Argument<std::string> file_id{this, "file-id", "The B2 file ID to download."};
+   Argument<std::optional<std::string>> local_file_path{this, "local-file-path", "Local path to save the file."};
+   Option<int> num_threads{this, "threads", "n", "Number of download threads.", 1};
 
-   bool valid(size_t wordc);
+   CommandConfiguration configuration() const override {
+      return {"download_file_by_id", "Download a file by its ID.", "", ""};
+   }
 
-   int execute(size_t wordc, CommandLine& cmds, BB& aws);
-
-   void printUsage();
+   int run() override;
 };
 
 } // namespace command

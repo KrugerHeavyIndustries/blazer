@@ -38,56 +38,48 @@ using namespace std;
 
 // types from http://www.iana.org/assignments/media-types/
 
-MimeTypes::Dictionary MimeTypes::ms_mimeTypes; 
-
-void MimeTypes::initialize() {
-
-    ms_mimeTypes[".txt"] = "text/plain";
-    ms_mimeTypes[".pov"] = "text/plain";
-    ms_mimeTypes[".inc"] = "text/plain";
-    ms_mimeTypes[".sh"] = "text/plain";
-    ms_mimeTypes[".rb"] = "text/plain";
-    ms_mimeTypes[".erb"] = "text/plain";
-    ms_mimeTypes[".h"] = "text/plain";
-    ms_mimeTypes[".hh"] = "text/plain";
-    ms_mimeTypes[".hpp"] = "text/plain";
-    ms_mimeTypes[".cpp"] = "text/plain";
-    ms_mimeTypes[".c"] = "text/plain";
-    ms_mimeTypes[".mak"] = "text/plain";
-    ms_mimeTypes["Makefile"] = "text/plain";
+MimeTypes::Dictionary MimeTypes::ms_mimeTypes = {
+    {".txt", "text/plain"},
+    {".pov", "text/plain"},
+    {".inc", "text/plain"},
+    {".sh", "text/plain"},
+    {".rb", "text/plain"},
+    {".erb", "text/plain"},
+    {".h", "text/plain"},
+    {".hh", "text/plain"},
+    {".hpp", "text/plain"},
+    {".cpp", "text/plain"},
+    {".c", "text/plain"},
+    {".mak", "text/plain"},
+    {"Makefile", "text/plain"},
     
-    ms_mimeTypes[".css"] = "text/css";
-    ms_mimeTypes[".csv"] = "text/csv";
-    ms_mimeTypes[".htm"] = "text/html";
-    ms_mimeTypes[".html"] = "text/html";
-    ms_mimeTypes[".xml"] = "text/xml";
+    {".css", "text/css"},
+    {".csv", "text/csv"},
+    {".htm", "text/html"},
+    {".html", "text/html"},
+    {".xml", "text/xml"},
     
-    ms_mimeTypes[".png"] = "image/png";
-    ms_mimeTypes[".gif"] = "image/gif";
-    ms_mimeTypes[".jpg"] = "image/jpeg";
-    ms_mimeTypes[".jpeg"] = "image/jpeg";
-    ms_mimeTypes[".tiff"] = "image/tiff";
-    ms_mimeTypes[".svg"] = "image/svg+xml";
-    ms_mimeTypes[".tga"] = "image";
-    
-    ms_mimeTypes[".mp3"] = "audio/mp3";
-    
-    ms_mimeTypes[".mp4"] = "video/mp4";
-    ms_mimeTypes[".mpg"] = "video/mpeg";
-    ms_mimeTypes[".mpeg"] = "video/mpeg";
-    ms_mimeTypes[".mov"] = "video/quicktime";
-    
-    ms_mimeTypes[".tex"] = "application/x-latex";
-    ms_mimeTypes[".pdf"] = "application/pdf";
-    
-    ms_mimeTypes[".tar"] = "application/x-tar";
-    ms_mimeTypes[".bz"] = "application/x-bzip";
-    ms_mimeTypes[".bz2"] = "application/x-bzip2";
-    ms_mimeTypes[".gz"] = "application/x-gzip";
-    ms_mimeTypes[".zip"] = "application/zip";
-    
-    ms_mimeTypes[".js"] = "application/js";
-}
+    {".png", "image/png"},
+    {".gif", "image/gif"},
+    {".jpg", "image/jpeg"},
+    {".jpeg", "image/jpeg"},
+    {".tiff", "image/tiff"},
+    {".svg", "image/svg+xml"},
+    {".tga", "image/tga"},
+    {".mp3", "audio/mp3"},
+    {".mp4", "video/mp4"},
+    {".mpg", "video/mpeg"},
+    {".mpeg", "video/mpeg"},
+    {".mov", "video/quicktime"},
+    {".tex", "application/x-latex"},
+    {".pdf", "application/pdf"},
+    {".tar", "application/x-tar"},
+    {".bz", "application/x-bzip"},
+    {".bz2", "application/x-bzip2"},
+    {".gz", "application/x-gzip"},
+    {".zip", "application/zip"},
+    {".js", "application/js"}
+}; 
 
 string MimeTypes::matchByExtension(const string& filename) {
    string::size_type demark = filename.find_last_of('.');

@@ -1,5 +1,5 @@
 // vim:set et ts=3 sw=3:
-// __  __ ______ _______ _______ _______ ______ 
+// __  __ ______ _______ _______ _______ ______
 // |  |/  |   __ \   |   |     __|    ___|   __ \
 // |     <|      <   |   |    |  |    ___|      <
 // |__|\__|___|__|_______|_______|_______|___|__|
@@ -7,15 +7,15 @@
 //
 // Copyright (C) 2016 Kruger Heavy Industries
 // http://www.krugerheavyindustries.com
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -27,26 +27,25 @@
 #ifndef COMMAND_FILE_BY_NAME_H
 #define COMMAND_FILE_BY_NAME_H
 
-#include "command.h" 
-
-class CommandLine; 
+#include "command.h"
 
 namespace khi {
+namespace command {
 
-class BB; 
+struct FileByName : BlazerCommand {
 
-namespace command { 
+   Argument<std::string> bucket_name{this, "bucket-name", "Name of the bucket."};
+   Argument<std::string> remote_file_name{this, "remote-file-name", "Name of the remote file."};
+   Argument<std::string> local_file_path{this, "local-file-path", "Local path to save the file."};
 
-struct FileByName : Base { 
+   CommandConfiguration configuration() const override {
+      return {"download_file_by_name", "Download a file by bucket and name.", "", ""};
+   }
 
-   bool valid(size_t wordc);
-
-   int execute(size_t wordc, CommandLine& cmds, BB& aws);
-
-   void printUsage();
+   int run() override;
 };
 
-} // namespace command 
+} // namespace command
 } // namespace khi
 
 #endif // COMMAND_FILE_BY_NAME_H

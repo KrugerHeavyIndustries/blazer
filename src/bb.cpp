@@ -50,7 +50,7 @@ namespace {
 
    using khi::BB_Bucket;
 
-#if __cplusplus > 201402L
+#if __cplusplus > 201103L
    struct find_name {
       std::string name;
       find_name(const std::string& value) : name(value) {}

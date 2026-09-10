@@ -1,5 +1,5 @@
 // vim:set et ts=3 sw=3:
-// __  __ ______ _______ _______ _______ ______ 
+// __  __ ______ _______ _______ _______ ______
 // |  |/  |   __ \   |   |     __|    ___|   __ \
 // |     <|      <   |   |    |  |    ___|      <
 // |__|\__|___|__|_______|_______|_______|___|__|
@@ -7,15 +7,15 @@
 //
 // Copyright (C) 2016 Kruger Heavy Industries
 // http://www.krugerheavyindustries.com
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -26,32 +26,16 @@
 
 #include "command_file_by_id.h"
 
-#include "commandline.h" 
 #include "bb.h"
 
-namespace khi { 
-namespace command { 
+namespace khi {
+namespace command {
 
-using namespace std;
-
-bool FileById::valid(size_t wordc) { 
-   return wordc > 1;
+int FileById::run() {
+   auto bb = createBB();
+   std::string path = local_file_path.has_value() ? *(*local_file_path) : *file_id;
+   return bb->downloadFileById(*file_id, path, *num_threads);
 }
 
-int FileById::execute(size_t wordc, CommandLine& cmds, BB& bb) { 
-   int idx = 1;
-   string fileId;
-   string localFilePath;
-
-   parse2(idx, cmds, fileId, localFilePath);
-   return bb.downloadFileById(fileId, localFilePath.empty() ? fileId.c_str() : localFilePath.c_str());
-}
-
-void FileById::printUsage() { 
-   cout << "Download file from backblaze:" << endl;
-   cout << "\tblazer download_file_by_id <fileId> <localFilePath>" << endl;
-   cout << endl;
-}
-
-} // namespace command 
+} // namespace command
 } // namespace khi
