@@ -11,6 +11,11 @@ Blazer is used actively on a daily basis as part of a backup solution for missio
 
 ## Installation
 
+### Dependencies
+
+- [restclient-cpp](https://github.com/mrtazz/restclient-cpp)
+- [fmt](https://github.com/fmtlib/fmt)
+
 ### Ubuntu PPA
 
     sudo add-apt-repository ppa:chris.kruger+ubuntu/blazer
