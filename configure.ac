@@ -1,8 +1,10 @@
-AC_INIT([blazer], [0.4.9], [blazer@krugerheavyindustries.com])
+AC_INIT([blazer], [0.5.0], [blazer@krugerheavyindustries.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_CXX
 AC_PROG_CC
 AC_CONFIG_HEADERS([src/config.h])
+
+AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
 
 #PKG_CHECK_MODULES([openssl], [openssl > 1.1.0])
 
@@ -16,6 +18,7 @@ AC_CHECK_LIB([restclient-cpp], [main])
 AC_CHECK_LIB([jansson], [main])
 AC_CHECK_LIB([pthread], [main])
 AC_CHECK_LIB([curl], [main])
+AC_CHECK_LIB([fmt], [main], [], [AC_MSG_FAILURE([can't find libfmt])])
 AC_CONFIG_FILES([
   Makefile
   src/Makefile

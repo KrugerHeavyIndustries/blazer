@@ -37,7 +37,6 @@
 #include <memory>
 #include <stdint.h>
 
-#include "multidict.h"
 #include "session.h"
 #include "dispatcho.h"
 
